@@ -148,8 +148,7 @@ phylum_summary %>%
   geom_col()
 ```
 
-Now, we can add meaningful axes labels and a title by adding a `labs` layer that 
-specifices what labels we want to add to our plot for the axes.
+Now, we can add meaningful axes labels and a title by adding a `labs` layer that specifies what labels we want to add to our plot for the axes.
 
 ```{r}
 phylum_summary %>% 
