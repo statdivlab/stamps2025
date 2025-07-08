@@ -27,7 +27,7 @@ First let's load libraries we'll need.
 library(tidyverse)
 # install radEmu (only if you don't already have it installed)
 if (!("radEmu" %in% row.names(installed.packages()))) {
-  install_github("https://github.com/statdivlab/radEmu")
+  devtools::install_github("https://github.com/statdivlab/radEmu")
 }
 library(radEmu)
 ```
@@ -270,7 +270,8 @@ ch_fit$B %>% rownames
 covariate_to_test <- which("GroupCRC" == ch_fit$B %>% rownames)
 two_robust_score_tests <- emuFit(formula = ~ Group,
                                  data = wirbel_sample[ch_study_obs, ],
-                                 B = ch_fit,
+                                 fitted_model = ch_fit,
+                                 refit = FALSE,
                                  test_kj = data.frame(k = covariate_to_test,
                                                       j = taxa_to_test),
                                  Y = small_Y)
@@ -318,7 +319,8 @@ taxa_to_test <- which(colnames(small_Y) %in%
 covariate_to_test <- which("GroupCRC" == ch_fit$B %>% rownames)
 your_robust_score_tests <- emuFit(formula = ~ Group,
                                   data = wirbel_sample[ch_study_obs, ],
-                                  B = ch_fit,
+                                  fitted_model = ch_fit,
+                                  refit = FALSE,
                                   test_kj = data.frame(k = covariate_to_test,
                                                       j = taxa_to_test),
                                   Y = small_Y)
@@ -338,7 +340,8 @@ We could run robust score tests for every taxon in this analysis, but it will ta
 ```{r, eval = FALSE}
 test_all <- emuFit(formula = ~ Group,
                    data = wirbel_sample[ch_study_obs, ],
-                   B = ch_fit,
+                   fitted_model = ch_fit,
+                   refit = FALSE,
                    Y = small_Y,
                    run_score_tests = TRUE)
 ```
@@ -358,7 +361,7 @@ Luckily, we can approximate the robust score tests with a companion method to `r
 
 ```{r, include=FALSE}
 if (!("fastEmu" %in% row.names(installed.packages()))) {
-  install_github("https://github.com/statdivlab/fastEmu")
+  devtools::install_github("https://github.com/statdivlab/fastEmu")
 }
 library(fastEmu)
 ```
@@ -577,7 +580,7 @@ qval_df %>%
   summarise(sum(qval < 0.1))
 ```
 
-Here we can see that the minimum q-value from `radEmu` is $0.12$, the minimum q-value from `ALDEx2` is $0.28$, the minimum q-value from `ANCOM-BC2` is $3.47e-9$ and the minimum q-value from `DESeq2` is $7.24e-11$. 
+Here we can see that the minimum q-value from `radEmu` is $0.12$, the minimum q-value from `ALDEx2` is $0.27$, the minimum q-value from `ANCOM-BC2` is $8.96e-8$ and the minimum q-value from `DESeq2` is $7.24e-11$. 
 
 Interpret the meaning of the minimum q-value from `radEmu` using your knowledge of the definition of a q-value. 
 

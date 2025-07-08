@@ -222,6 +222,10 @@ Note that our estimates and standard errors for `Sample Type`Sputum and `Treatme
 Finally, we could model the ddpcr as counts coming from a random process and we are interested in exploring how the mean of these counts may be related to the `Sample Type`. An option for this is using a Generalized Linear Model with a log link function (using a Poisson regression). We can do this in R using the `rigr` package with the `rate` argument. While we we could use the `glm` function in the `stats` package, we like `rigr` because by default it uses robust standard errors (these are robust to certain types of model misspecification).   
 
 ```{r}
+# install rigr (only if you don't already have it installed)
+if (!("rigr" %in% row.names(installed.packages()))) {
+  install_github("https://github.com/statdivlab/rigr")
+}
 library(rigr)
 mod_counts_type <- regress(fnctl = "rate", formula = ddpcr ~ `Sample Type`, data = both)
 coef(mod_counts_type)
