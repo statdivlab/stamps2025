@@ -67,7 +67,7 @@ The last line guarantees `Subject ID` (which is originally a string variable ord
 
 ```{r}
 both <- both %>%
-  mutate(`Subject ID` = _____(______(`Subject_ID`))) 
+  mutate(`Subject ID` = _____(______(`Subject ID`))) 
 ```
 
 You can run each of these lines individually to further explore what each command is doing. 
@@ -163,7 +163,7 @@ Insights like this from our plot might lead us to analyze our data.
 
 ## Fitting regression models
 
-Now, let's look at the association between digital PCR measurements and whether the sample is from saliva or sputum. We'll use the lm command. 
+Now, let's look at the association between digital PCR measurements and whether the sample is from saliva or sputum. We'll use the `lm` command. 
   
 Note that we are deciding to model the mean of our outcome on the linear scale. We could also choose to model the log of the mean of this variable. We will see an example of this at the end of this lab. Both options are valid, as long as you interpret the coefficients in terms any transformations you've done. This decision is driven by which model you believe to reflect reality better. 
 
@@ -192,7 +192,7 @@ What does the second row of the output tell us?
 
 Our estimate of 1,006,955 for the coefficient for `Sample Type`Sputum tells us that the estimated mean observed ddPCR reading for a sample of sputum is 1,000,955 counts/uL higher than the estimated mean observed ddPCR for a sample from saliva. 
 
-We have a p-value of 0.01355. If we use a alpha level of 0.05, we reject the null hypothesis that there is no difference in the true mean concentration in Sputum and Saliva samples. 
+We have a p-value of 0.01. If we use a alpha level of 0.05, we reject the null hypothesis that there is no difference in the true mean concentration in Sputum and Saliva samples. 
 
 Now, let's fit a model with multiple covariates. Let's consider `Treatment Group` and `Sample Type`. Write the proper model below, using `+` to connect covariates
 
@@ -219,16 +219,17 @@ Now we have an extra row. Not only do we have rows for `Sample Type`Sputum and T
 
 Note that our estimates and standard errors for `Sample Type`Sputum and `Treatment Group`ON are different for our two models. This is because whenever we change something (add a covariate, add an interaction, etc) we are fitting a different model. Our strongest advice on the subject of "which model to choose?" is to be motivated by your scientific question, and consider the classification of variables presented in the lecture: predictor of interest (always include), precision variables (good to include most important ones), confounders (always include, but use the actual definition, not the way most people talk about it) and relevant effect modifiers (include if scientifically relevant)). 
 
-Finally, we could model the ddpcr as counts coming from a random process and we are interested in exploring how the mean of these counts may be related to the `Sample Type`. An option for this is using a Generalized Linear Model with a log link function (using a Poisson regression). We can do this in R through `glm`.  
+Finally, we could model the ddpcr as counts coming from a random process and we are interested in exploring how the mean of these counts may be related to the `Sample Type`. An option for this is using a Generalized Linear Model with a log link function (using a Poisson regression). We can do this in R using the `rigr` package. While we we could use the `glm` function in the `stats` package, we like `rigr` because by default it uses robust standard errors (these are robust to certain types of model misspecification).   
 
 ```{r}
-mod_counts_type <- glm(ddpcr ~ `Sample Type`, data = both, family = poisson(link = "log"))
-summary(mod_counts_type)
+library(rigr)
+mod_counts_type <- regress(fnctl = "rate", formula = ddpcr ~ `Sample Type`, data = both)
+coef(mod_counts_type)
 ```
 
 How do we interpret these coefficients? 
 
-Since in this model we are using a log link function, our coefficients describe how the log(expected counts) differs between saliva samples and sputum samples. A p-value lower than 2e-16 (at an alpha level of 0.05) indicates we have enough evidence to reject there is no difference between these log(expected counts). And by exponentiating  the estimated coefficient (exp(7.336e-01) = 2.082564), we can say that the estimated expected counts observed for samples of Sputum is 2.08 times higher than the estimated expected counts for samples of saliva.
+Since in this model we are using a log link function, our coefficients describe how the log(expected counts) differs between saliva samples and sputum samples. A p-value of 0.01 (at an alpha level of 0.05) indicates we have enough evidence to reject there is no difference between these log(expected counts). And by exponentiating the estimated coefficient (exp(0.73) = 2.08), we can say that the estimated expected counts observed for samples of Sputum is 2.08 times higher than the estimated expected counts for samples of saliva.
 
 Now create your own model, by selecting:
 1. Two covariates that you think could potentially be associated to the ddpcr counts in some scale. 
@@ -236,9 +237,9 @@ Now create your own model, by selecting:
 Include your fitted model here: 
 
 ```{r}
-  My_own_mod <- 
+My_own_mod <- 
   
-  summary(My_own_mod)
+coef(My_own_mod)
 ```
 
 And then provide an interpretation on your results: 
