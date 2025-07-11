@@ -377,23 +377,23 @@ dim(bigger_Y)
 
 We are left with $758$ mOTUs. Again, we will run robust score tests for our two mOTUs of interest, and you can add in the mOTU that you investigated earlier. 
 
-```{r, eval = FALSE}
+```{r}
 taxa_to_test <- which(colnames(bigger_Y) %in%
                         c("unknown Eubacterium [meta_mOTU_v2_7116]",
                           "Fusobacterium nucleatum s. nucleatum [ref_mOTU_v2_0777]",
                           "add your mOTU here"))
 ```
 
-`fastEmu` has pretty similar sytax to radEmu, except that we will also specify a small set of mOTUs as the comparison set (this changes the interpretation of our parameter, it is now the log fold difference of the mOTU of interest relative to the typical log fold difference in the comparison set. Here we choose the set of mOTUs in our previous model as the comparison set.)
+`fastEmu` has pretty similar sytax to radEmu, except that we will also specify a small set of mOTUs as the reference set (this changes the interpretation of our parameter, it is now the log fold difference of the mOTU of interest relative to the typical log fold difference in the reference set. Here we choose the set of mOTUs in our previous model as the reference set.)
 
 This will take ~1 minute to run.
 
 ```{r}
-fastEmu_res <- fastEmuTest(formula = ~ Group,
+fastEmu_test <- fastEmuFit(formula = ~ Group,
                            data = wirbel_sample[ch_study_obs, ],
                            Y = bigger_Y,
                            # set comparison set to be set from earlier analysis
-                           constraint_cats = which(colnames(bigger_Y) %in% colnames(small_Y)),
+                           reference_set = which(colnames(bigger_Y) %in% colnames(small_Y)),
                            test_kj = data.frame(k = 2, j = taxa_to_test),
                            # set lower tolerances than default
                            # this means the estimates won't be *quite* as precise,
@@ -402,15 +402,15 @@ fastEmu_res <- fastEmuTest(formula = ~ Group,
                            constraint_tol = 1e-3)
 ```
 
-Now we have estimates for all $758$ mOTUs, and robust score test results for the same mOTUs as earlier. One difference between `fastEmu` and `radEmu` is that `radEmu` would take much longer to run these robust score tests in the presence of $758$ mOTUS, but keep in mind that the interpretation of the estimated parameters changes (specific subset of reference taxa vs median-reference).
+Now we have estimates for all $758$ mOTUs, and robust score test results for the same mOTUs as earlier. One difference between `fastEmu` and `radEmu` is that `radEmu` would take much longer to run these robust score tests in the presence of $758$ mOTUS.
 
 ```{r}
-fastEmu_res$coef[taxa_to_test, c("covariate", "category", "estimate", "pval")]
+fastEmu_test$coef[taxa_to_test, c("covariate", "category", "estimate", "pval")]
 ```
 
 The results from these two score tests are nearly identical to the `radEmu` model.
 
-We recommend using `fastEmu` over `radEmu` when running differential abundance analyses for very large datasets. That said, you do need to choose a reference set to use `fastEmu`. This is either a set of taxa that you believe to be unchanging in abundance (in which case you can estimate fold-changes! i.e., not fold-changes-relative-to-something-else), or just a set of taxa whose fold-changes you'd like to compare other fold-changes to. In the case of analysing gene abundances (here we're using taxonomic abundances), we recommend the ribosomal genes as a reference set, because we expect these to change less in differential abundance across covariates than other types of genes. 
+We recommend using `fastEmu` over `radEmu` when running differential abundance analyses for very large datasets. That said, you do need to choose a reference set to use `fastEmu`. This could be a set of taxa that you believe to be unchanging in abundance (in which case you can estimate fold-changes! i.e., not fold-changes-relative-to-something-else). If you don't have a set in mind, `fastEmu` can choose a data-driven reference set to be a small set of taxa whose estimated log fold-differences from `radEmu` are closest to the typical estimated log fold-difference. With this approach, the parameters chosen between `radEmu` and `fastEmu` will usually be nearly the same. 
 
 ## Fitting other models
 
@@ -507,26 +507,40 @@ library(DESeq2)
 citation("DESeq2")
 ```
 
-`DESeq2` cannot run with default settings unless there's at least one taxon observed in every sample. Let's check on this condition in our data.  
-
-```{r}
-mOTUs_no_zero <- colSums(small_Y == 0) == 0
-which(mOTUs_no_zero) 
-# named integer(0) is what R says when it can't find any indices that are equal to TRUE
-```
-
-Because there are no mOTUs in our data that fit this criteria, we will need to add pseudocounts. We will add a count of $1$ to each observation in our count matrix (note: there are different ways in which people choose to use pseudocounts. This is why we try to avoid them in our methods). 
+Now, we can run `DESeq2`. 
 
 ```{r, message = FALSE}
-Y_pseudo <- small_Y_transpose + 1
-dds <- DESeqDataSetFromMatrix(countData = Y_pseudo,
+dds <- DESeqDataSetFromMatrix(countData = small_Y_transpose,
                               colData = wirbel_sample[ch_study_obs, ],
                               design = ~ Group)
-deseq_res <- DESeq(dds)
+deseq_res <- DESeq(dds, sfType = "poscounts")
 deseq_results <- results(deseq_res)
 deseq_est <- deseq_results$log2FoldChange/log(2) 
 # note, we divide by log base 2 fold change by log 2 so that it will be on the same scale as the log fold changes from other methods that use a natural log
 deseq_pvals <- deseq_results$pvalue
+```
+
+### LinDA
+
+`LinDA` is a new microbiome-focused method that uses a log-ratio transformation after including pseudocounts. 
+
+```{r, include=FALSE}
+if (!("MicrobiomeStat" %in% row.names(installed.packages()))) {
+  install.packages("MicrobiomeStat")
+}
+library(MicrobiomeStat)
+# More information can be found in vignettes and in the papers cited here:
+citation("MicrobiomeStat")
+```
+
+Now, we can run `LinDA`. 
+
+```{r, message = FALSE}
+linda_res <- linda(feature.dat = small_Y_transpose, meta.dat = wirbel_sample[ch_study_obs, ],
+                   formula = "~ Group", feature.dat.type = "count", is.winsor = FALSE)
+linda_est <- linda_res$output$GroupCRC$log2FoldChange / log(2)
+# note, we divide by log base 2 fold change by log 2 so that it will be on the same scale as the log fold changes from other methods that use a natural log
+linda_pvals <- linda_res$output$GroupCRC$pvalue
 ```
 
 ## Comparing across methods
@@ -534,7 +548,7 @@ deseq_pvals <- deseq_results$pvalue
 Now that we've run each of these methods, let's compare the estimates and p-values. We'll start with the estimates. 
 
 ```{r}
-data.frame(radEmu_est, aldex_est, ancom_est, deseq_est) %>%
+data.frame(radEmu_est, aldex_est, ancom_est, deseq_est, linda_est) %>%
   cor(use = "complete.obs")
 ```
 
@@ -544,7 +558,7 @@ Next, we can compare the p-values.
 
 ```{r}
 pval_df <- data.frame(mOTU = names(small_Y),
-  radEmu_pvals, aldex_pvals, ancom_pvals, deseq_pvals)
+  radEmu_pvals, aldex_pvals, ancom_pvals, deseq_pvals, linda_pvals)
 pval_df %>% dplyr::select(contains("pval")) %>%
   cor(use = "complete.obs")
 ```
@@ -569,9 +583,10 @@ qval_df <- pval_df %>%
          # expects, they instead range from 0 to ~0.85
          aldex_q = qvalue::qvalue(aldex_pvals, pi0 = 1)$qvalues,
          ancom_q = qvalue::qvalue(ancom_pvals)$qvalues,
-         deseq_q = qvalue::qvalue(deseq_pvals, pi0 = 1)$qvalues) %>% 
+         deseq_q = qvalue::qvalue(deseq_pvals, pi0 = 1)$qvalues,
+         linda_q = qvalue::qvalue(linda_pvals)$qvalues) %>% 
   dplyr::select(-contains("pvals")) %>%
-  pivot_longer(cols = 2:5, names_to = "method", values_to = "qval") 
+  pivot_longer(cols = 2:6, names_to = "method", values_to = "qval") 
 qval_df %>%
   group_by(method) %>%
   summarise(min(qval))
@@ -580,13 +595,13 @@ qval_df %>%
   summarise(sum(qval < 0.1))
 ```
 
-Here we can see that the minimum q-value from `radEmu` is $0.12$, the minimum q-value from `ALDEx2` is $0.27$, the minimum q-value from `ANCOM-BC2` is $8.96e-8$ and the minimum q-value from `DESeq2` is $7.24e-11$. 
+Here we can see that the minimum q-value from `radEmu` is $0.12$, the minimum q-value from `ALDEx2` is $0.27$, the minimum q-value from `ANCOM-BC2` is $8.96e-8$, the minimum q-value from `DESeq2` is $1.55e-3$, and the minimum q-value from `LinDA` is $7.41e-6$. 
 
 Interpret the meaning of the minimum q-value from `radEmu` using your knowledge of the definition of a q-value. 
 
-This means that `ANCOM-BC2` and `DESeq2` find much stronger evidence for differential abundance for some mOTUs in our data (i.e. if we control the false discovery rate at $10\%$ we can make several discoveries), and `radEmu` and `ALDEx2` find weaker evidence (i.e. if we control the false discovery rate at $10\%$ we cannot make discoveries). 
+This means that `ANCOM-BC2`, `DESeq2`, and `LinDA` find much stronger evidence for differential abundance for some mOTUs in our data (i.e. if we control the false discovery rate at $10\%$ we can make several discoveries), and `radEmu` and `ALDEx2` find weaker evidence (i.e. if we control the false discovery rate at $10\%$ we cannot make discoveries). 
 
-That said, `ANCOM-BC2` and `DESeq2` fail to control Type I error (see the slides), which is why the StatDivLab would hesitate to claim "significant! FDR<0.1!" here. `radEmu` and `ALDEx2` do control Type I error, and don't find anything significant at the 10% FDR level here... there's just not enough strength of evidence at this stringency threshold...  
+That said, in StatDivLab simulations, with large sample sizes `ANCOM-BC2`, `DESeq2`, and `LinDA` fail to control Type I error, which is why the StatDivLab would hesitate to claim "significant! FDR<0.1!" here. `radEmu` and `ALDEx2` do control Type I error, and don't find anything significant at the 10% FDR level here... there's just not enough strength of evidence at this stringency threshold...  
 
 Finally, we will compare the overlap between the mOTUs with the lowest q-values from `radEmu` and `ALDEx2`. 
 
@@ -630,6 +645,9 @@ In this lab, we've compared several differential abundance methods: `radEmu`, `f
   - cons: fails to control Type I error rate in some situations, can't handle data separation (a common consequence of sparsity)
 - `DESeq2`
   - pros: faster than `radEmu` to test all categories 
-  - cons: fails to control Type I error in some situations, requires pseudocounts in some settings 
+  - cons: fails to control Type I error in some situations, tailored for RNA-seq data, not microbiome data
+- `LinDA`
+  - pros: faster than `radEmu` to test all categories, high power in some settings
+  - cons: fails to control Type I error in some situations (large sample sizes with sparse data), uses a pseudocount 
 
 Check out the documentation for each of these packages for more information and more practice using them. Although this example uses a single binary covariate, each of these methods can be run with more complex regression models. 
