@@ -204,7 +204,7 @@ phylum_summary %>%
 
 Earlier, we were looking at raw counts across different covariate values and plotting them using bar plots. 
 
-However, we might be interested in how different different taxon's counts change together. In particular, let's say we are interested in seeing how *Cyanobacteria* and *Proteobacteria* counts vary together. This is a setting where a scatterplot would be more useful.
+However, we might be interested in how the counts of different taxa change together. In particular, let's say we are interested in seeing how *Cyanobacteria* and *Proteobacteria* counts vary together. This is a setting where a scatterplot would be more useful.
 
 Use your `ggplot` skills to make this scatter plot using the `phylum_data` table.
 

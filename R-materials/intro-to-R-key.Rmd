@@ -66,7 +66,7 @@ clr(c(1, 5, 0, 4))
 Turns out we can't take the log of $0$! Rewrite this to include an optional argument `pseudo` that is set to $0.5$ by default, that will add this quantity to all $0$ values in the input `counts`.
 
 ```{r, eval = FALSE}
-clr_with_pseudo <- function(counts, pseudo = 0.05) { # add optional argument
+clr_with_pseudo <- function(counts, pseudo = 0.5) { # add optional argument
   new_counts <- counts
   new_counts[new_counts == 0] <- pseudo # add pseudocounts to all 0 counts 
   transformed <- log(new_counts) - mean(log(new_counts))
@@ -105,7 +105,7 @@ phylum_data <- read.csv("data/phylum_data.txt", sep = "\t", row.names = 1, heade
 
 new_phylum_data <- phylum_data %>% mutate(acid_fuso = Acidobacteria + Fusobacteria) %>%
   filter(acid_fuso > 0) %>% 
-  select(-!c("Location", "Month", "Season", "Type", "acid_fuso"))
+  select(Location, Month, Season, Type, acid_fuso)
 ```
 
 2. Using the same `phylum_data` data frame, create a new data frame that is aggregated to the location and season level and includes the proportion of samples with non-zero counts of *TM6* and the proportion of samples with non-zero counts of *TM7*.
