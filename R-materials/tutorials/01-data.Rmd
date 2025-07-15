@@ -27,7 +27,7 @@ otus <- read.csv("data/otus.txt", sep = "\t", row.names = 1, header = T)
 
 Once you have run the code above, you will see a difference in your environment. You should now have two new objects in your environment. You can see that `otus` has 387 observations of 12 variables and `covariates` has 12 observations of 5 variables. What happens when you click on `otus` object in the environment? 
 
-## "Meeting" your data 
+## Exploring your data 
 
 The first thing to do after loading in data is to get a feel for it. How much data do you have? How is it organized? What are the observations and what are the variables? 
 
