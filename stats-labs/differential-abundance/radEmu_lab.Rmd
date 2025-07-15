@@ -1,0 +1,653 @@
+---
+title: "Differential Abundance Lab"
+author: "David Clausen, Amy Willis, Sarah Teichman"
+date: "2024-07-23"
+output: html_document
+---
+
+In this lab we'll explore a dataset published by Wirbel et al. (2019). (https://www.nature.com/articles/s41591-019-0406-6). 
+
+This is a meta-analysis of case-control studies, meaning that Wirbel et al. collected raw sequencing data from studies other researchers conducted and re-analyzed it (in this case, they also collected some new data of their own).
+
+Wirbel et al. published two pieces of data we'll focus on today:
+
+1) metadata giving demographics and other information about participants
+
+2) a mOTU (metagenomic OTU) table
+
+We'll look at a subset of all $849$ mOTUs Wirbel et al. published.
+
+Although this lab works with mOTUs generated from shotgun data, all of the methods we consider will also work with OTUs generated from amplicon data, or other types of categories (genes, etc.) that we observe as counts from high-throughput sequencing. 
+
+In this analysis, we're most interested in comparing microbial abundance in cases diagnosed with colorectal cancer to abundances in controls (without this diagnosis).
+
+First let's load libraries we'll need. 
+
+```{r, include=FALSE}
+library(tidyverse)
+# install radEmu (only if you don't already have it installed)
+if (!("radEmu" %in% row.names(installed.packages()))) {
+  devtools::install_github("https://github.com/statdivlab/radEmu")
+}
+library(radEmu)
+```
+
+## Exploring the data
+
+We can start by loading the metadata table.
+
+```{r}
+data("wirbel_sample")
+```
+
+Use `dim()` and `head()` to check out the size and contents of this metadata table. 
+
+```{r}
+
+```
+
+Let's see how many observations we have among cases ("CRC") and controls ("CTR")
+
+```{r}
+wirbel_sample %>%
+  group_by(Group) %>%
+  summarize(n = length(Group))
+```
+
+We have data from studies in five different countries. How much from each study, you ask? You can find out using the same syntax as in the previous code chunk.
+
+```{r}
+
+```
+
+Now let's load the mOTU table.
+
+```{r}
+data("wirbel_otu")
+```
+
+Use `dim()` to check out the size of this dataset. Often `head()` produces too much output for a count table, so instead subset `wirbel_otu` to the first five samples and the first five columns to get a sense of what it looks like. 
+
+```{r}
+
+```
+
+Based on the dimensions of the metadata and mOTU data, how are these data tables related? 
+
+Let's save these mOTU names in a vector.
+
+```{r}
+mOTU_names <- colnames(wirbel_otu)
+```
+
+## Fitting a model
+
+`radEmu` is a package that can be used to estimate log fold differences in the abundance of microbial taxa between levels of a covariate. In this analysis, the covariate that we are primarily interested in is whether a sample is from a case of colorectal cancer or a control. We will make control ("CTR") the reference level:
+
+```{r}
+wirbel_sample$Group <- factor(wirbel_sample$Group, levels = c("CTR","CRC"))
+```
+
+While in general we would fit a model to all mOTUs, we are going to subset to some specific genera for the purposes of this lab. Let's look at *Eubacterium*, *Porphyromonas*, *Faecalibacteria*, and *Fusobacterium* for now.
+
+```{r}
+chosen_genera <- c("Eubacterium", "Faecalibacterium", "Fusobacterium", "Porphyromonas")
+mOTU_name_df <- data.frame(name = mOTU_names) %>%
+  mutate(base_name = stringr::str_remove(mOTU_names, "unknown ") %>%
+           stringr::str_remove("uncultured ")) %>%
+  mutate(genus_name = stringr::word(base_name, 1))
+restricted_mOTU_names <- mOTU_name_df %>%
+  filter(genus_name %in% chosen_genera) %>%
+  pull(name)
+```
+
+While we would generally fit a model using all of our samples, for this lab we are only going to consider data from a case-control study from China.
+
+```{r}
+ch_study_obs <- which(wirbel_sample$Country %in% c("CHI"))
+```
+
+Next, we want to confirm that all samples have at least one non-zero count across the categories we've chosen and that all categories have at least one non-zero count across the samples we've chosen.
+
+```{r}
+small_Y <- wirbel_otu[ch_study_obs, restricted_mOTU_names]
+sum(rowSums(small_Y) == 0) # no samples have a count sum of 0
+sum(colSums(small_Y) == 0) # one category has a count sum of 0
+
+category_to_rm <- which(colSums(small_Y) == 0)
+small_Y <- small_Y[, -category_to_rm]
+sum(colSums(small_Y) == 0)
+```
+
+The function that we use to fit our model is called `emuFit`. It can accept your data in various forms, and here we will show how to use it with data frames as input. You can also input `phyloseq` objects!
+
+One version of inputs to `emuFit` are
+
+- `formula`: This is a formula telling radEmu what predictors to use. We are
+             using Group, which is an indicator for case (CRC) vs control (CTR).
+- `data`: A dataframe containing information on our predictors. Recall that
+          here we're only looking observations from the Chinese study.
+- `Y`: A matrix or dataframe containing our observed abundance data
+       (e.g., counts or depth measurements). The rows give the observations
+       (samples), and the columns give the categories (taxa/mOTUs). Here we are
+       only considering the observations from the Chinese study and the
+       specific genera that we chose.
+
+there is also an important optional argument:
+
+- `run_score_tests`: A logical value denoting whether or not to run score tests.
+                    Score tests are awesome in their error rate control (including
+                    with small sample sizes; though of course larger sample sizes
+                    always give better power), but require refitting the model, so
+                    can require some compute time.
+
+```{r}
+ch_fit <- emuFit(formula = ~ Group,
+                 data = wirbel_sample[ch_study_obs, ],
+                 Y = small_Y,
+                 run_score_tests = FALSE)
+```
+
+Let's check out what this object looks like!
+
+```{r}
+ch_fit
+```
+
+The way to access estimated coefficients and confidence intervals from the model is with `ch_fit$coef`. We'll save the estimates in a vector
+
+```{r}
+ch_fit$coef[1, ]
+radEmu_est <- ch_fit$coef$estimate
+```
+
+Let's interpret this parameter! Here `radEmu` is estimating that the log fold difference in *Fusobacterium nucleatum s. vincentii [ref_mOTU_v2_0754]* associated with cases of CRC (as opposed to controls) minus the *typical* log fold difference associated with cases versus controls across all $46$ mOTUs in this analysis is $1.486$. 
+
+By default `radEmu` estimates this type of parameter, in which we compare the log fold difference in one mOTU to the *typical* (approximately the median) log fold difference in all mOTUs. However, `radEmu` is flexible and will let you define other types of parameters. We can instead compare all log fold differences to the log fold difference for a specific mOTU. 
+
+What reference mOTU should we use? That's up to you. If there is a specific mOTU that you're interested in comparing to, you can use that one. Or you could choose 
+
+- the mOTU that has the highest abundance across all samples
+- the mOTU that is present in the highest number of samples
+- the mOTU that has the lowest variance in raw counts across all samples
+- etc. 
+
+We'll give you an example below, but feel free to replace this with a mOTU that you choose (and flag down the TAs if you need help with the code to find the mOTU that you care about)! 
+
+```{r}
+
+```
+
+We'll find the mOTU that is present in the highest proportion of samples from the Chinese cohort, and use this as a reference mOTU.
+
+```{r}
+num_present <- colSums(small_Y > 0)
+ref_num <- which.max(num_present)
+ref_num
+```
+
+Now we will refit `radEmu` with the new parameter that we are estimating.
+
+```{r}
+ch_fit_ref <- emuFit(formula = ~ Group,
+                     data = wirbel_sample[ch_study_obs, ],
+                     Y = small_Y,
+                     run_score_tests = FALSE,
+                     # set our "constraint" i.e. choose our reference mOTU
+                     constraint_fn = ref_num)
+ch_fit_ref$coef[1, ]
+```
+
+How we will interpret our parameter now? Fill in the following:
+
+Here `radEmu` is estimating that the log fold difference in *Fusobacterium nucleatum s. vincentii [ref_mOTU_v2_0754]* associated with cases of CRC (as opposed to controls) minus _______________________________ is $1.867$. 
+
+We can compare the estimates from these two runs of `radEmu`.
+
+```{r}
+data.frame(typical_est = ch_fit$coef$estimate,
+           reference_est = ch_fit_ref$coef$estimate) %>%
+  ggplot(aes(x = typical_est, y = reference_est)) + 
+  geom_point() + 
+  geom_abline(aes(intercept = 0, slope = 1), color = "red") + 
+  labs(x = "Estimate compared to typical mOTU",
+       y = "Estimate compared to reference mOTU")
+```
+
+The $x = y$ line is shown in red. What do you notice about the relationship between the estimates from the first run of `radEmu` and the estimates from the second run of `radEmu`? 
+
+What is the numerical difference between the estimate of any mOTU in `ch_fit` and the estimate of the same mOTU in `ch_fit_ref`?
+
+```{r}
+
+```
+
+Let's switch back to the model that we fit first, in which we compare each log fold difference to the typical log fold difference across all mOTUs, and look closer at our results. 
+
+```{r}
+ch_df <- ch_fit$coef %>%
+  mutate(Genus = (mOTU_name_df %>%
+                    filter(genus_name %in% chosen_genera) %>%
+                    pull(genus_name))[-category_to_rm]) %>%
+  # add genus name to output from emuFit
+  mutate(cat_small = stringr::str_remove(paste0("mOTU_",
+                                                stringr::str_split(category, 'mOTU_v2_', simplify = TRUE)[, 2]),
+                                         "\\]")) %>%
+  mutate(cat_small = factor(cat_small, levels = cat_small[order(Genus)]))
+  # reorder mOTU categories by genus
+
+radEmu_plot <- ggplot(ch_df) +
+  geom_point(aes(x = cat_small, y = estimate,color = Genus), size = .5) +
+  geom_errorbar(aes(x = cat_small, ymin = lower, ymax = upper, color = Genus), width = .25) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Category",
+       y = "Estimate") +
+  coord_cartesian(ylim = c(-5, 10))
+radEmu_plot
+```
+
+Interestingly, we estimate a mOTU *unknown Eubacterium [meta_mOTU_v2_7116]* assigned to Eubacteria to have a much higher ratio of abundance (comparing CRC group to control) than is typical across the Eubacteria mOTUs we included in this analysis.
+
+The confidence interval for this effect does not include zero -- but (!!!) the kind of confidence interval that is returned by default by emuFit is not extremely reliable when counts are very skewed or sample size is small-to-moderate.
+
+To investigate further, let's run a robust score test, which is more reliable in these settings (but also takes more time because apparently we can't have nice things). For comparison, we'll also test the mOTU *Fusobacterium nucleatum s. nucleatum [ref_mOTU_v2_0777]*, which we also estimate to have a much larger ratio of concentrations across groups than is typical among the taxa we included in this model fit.
+
+To set up this test, we can again run `emuFit`, giving it the fitted values that it's
+already found:
+
+- `formula`, `data` and `Y` are as before
+- `B` is our previous fitted object (the output of `emuFit`)
+- `test_kj` a dataframe listing the indices of the parameters (in `ch_fit$B`) that we want
+to test. Below we show how to identify these, but `j = 3` is F. nucleatum and `j = 36` is
+the Eubacterium meta mOTU.
+
+```{r}
+taxa_to_test <- which(colnames(small_Y) %in%
+                        c("unknown Eubacterium [meta_mOTU_v2_7116]",
+                          "Fusobacterium nucleatum s. nucleatum [ref_mOTU_v2_0777]"))
+ch_fit$B %>% rownames
+covariate_to_test <- which("GroupCRC" == ch_fit$B %>% rownames)
+two_robust_score_tests <- emuFit(formula = ~ Group,
+                                 data = wirbel_sample[ch_study_obs, ],
+                                 fitted_model = ch_fit,
+                                 refit = FALSE,
+                                 test_kj = data.frame(k = covariate_to_test,
+                                                      j = taxa_to_test),
+                                 Y = small_Y)
+```
+
+Let's take a look at the test output.
+
+```{r}
+two_robust_score_tests$coef[taxa_to_test, c("covariate", "category", "estimate", "pval")]
+```
+
+The *Fusobacterium nucleatum* mOTU has a robust score test p-value of 0.07, while the *unknown Eubacterium* mOTU has a robust score test p-value of 0.30. Does this make sense? Let's investigate further by looking at the *Eubacterium* mOTU counts by Group.
+
+```{r}
+data.frame(counts = wirbel_otu[ch_study_obs, "unknown Eubacterium [meta_mOTU_v2_7116]"],
+           group = wirbel_sample$Group[ch_study_obs]) %>%
+  mutate(eubact_present = counts > 0) %>%
+  group_by(group, eubact_present) %>%
+  summarise(count = n())
+```
+
+We only detect this meta-mOTU in a single sample in the Chinese study cohort! So, yes -- it makes sense that our test returns a relatively large p-value.
+Good job, robust score test!
+
+Now lets look at *F. nucleatum*.
+
+```{r}
+data.frame(counts = wirbel_otu[ch_study_obs,
+                               "Fusobacterium nucleatum s. nucleatum [ref_mOTU_v2_0777]"],
+           group = wirbel_sample$Group[ch_study_obs]) %>%
+  mutate(fuso_present = counts > 0) %>%
+  group_by(group, fuso_present) %>%
+  summarise(count = n())
+```
+
+This also makes sense given what we found --  *F. nucleatum* shows up in a sizeable minority of CRC cases, whereas Wirbel et al detect it in only one control participant.
+
+Now it's your turn. Let's look back at the plot of `radEmu` estimates and confidence intervals. Choose one mOTU from that plot and run a robust score test to find a p-value for it. 
+
+```{r, eval = FALSE}
+radEmu_plot
+
+taxa_to_test <- which(colnames(small_Y) %in%
+                        c("your mOTU here"))
+covariate_to_test <- which("GroupCRC" == ch_fit$B %>% rownames)
+your_robust_score_tests <- emuFit(formula = ~ Group,
+                                  data = wirbel_sample[ch_study_obs, ],
+                                  fitted_model = ch_fit,
+                                  refit = FALSE,
+                                  test_kj = data.frame(k = covariate_to_test,
+                                                      j = taxa_to_test),
+                                  Y = small_Y)
+
+data.frame(counts = wirbel_otu[ch_study_obs,
+                               "your mOTU here"],
+           group = wirbel_sample$Group[ch_study_obs]) %>%
+  mutate(mOTU_present = counts > 0) %>%
+  group_by(group, mOTU_present) %>%
+  summarise(count = n())
+```
+
+What did you learn about the mOTU that you chose? Does the p-value align with what you expected from the estimate and confidence interval? 
+
+We could run robust score tests for every taxon in this analysis, but it will take ~3 minutes to run. Therefore we do not evaluate it here (note the argument in the code chunk `eval = FALSE`.
+
+```{r, eval = FALSE}
+test_all <- emuFit(formula = ~ Group,
+                   data = wirbel_sample[ch_study_obs, ],
+                   fitted_model = ch_fit,
+                   refit = FALSE,
+                   Y = small_Y,
+                   run_score_tests = TRUE)
+```
+
+However, we ran these robust score tests and saved the coefficient table for you, which we can load in here. 
+
+```{r}
+radEmu_coef <- read.csv("https://raw.githubusercontent.com/statdivlab/stamps2024/main/stats-labs/differential-abundance/radEmu_coef.csv")
+radEmu_pvals <- radEmu_coef$pval
+```
+
+## FastEmu
+
+What if we want to analyze all $845$ mOTUs for the Chinese cohort? While the estimation procedure in `radEmu` can handle this many otus, the score tests will run pretty slowly, because the more categories in our model, the more parameters we have to estimate for each score test, and the longer this process will take.
+
+Luckily, we can approximate the robust score tests with a companion method to `radEmu`, `fastEmu`!
+
+```{r, include=FALSE}
+if (!("fastEmu" %in% row.names(installed.packages()))) {
+  devtools::install_github("https://github.com/statdivlab/fastEmu")
+}
+library(fastEmu)
+```
+
+First we need to get rid of all of the mOTUs in the full dataset with only zero counts across the Chinese study cohort.
+
+```{r}
+bigger_Y <- wirbel_otu[ch_study_obs, ]
+categories_to_rm <- which(colSums(bigger_Y) == 0)
+bigger_Y <- bigger_Y[, -categories_to_rm]
+dim(bigger_Y)
+```
+
+We are left with $758$ mOTUs. Again, we will run robust score tests for our two mOTUs of interest, and you can add in the mOTU that you investigated earlier. 
+
+```{r}
+taxa_to_test <- which(colnames(bigger_Y) %in%
+                        c("unknown Eubacterium [meta_mOTU_v2_7116]",
+                          "Fusobacterium nucleatum s. nucleatum [ref_mOTU_v2_0777]",
+                          "add your mOTU here"))
+```
+
+`fastEmu` has pretty similar sytax to radEmu, except that we will also specify a small set of mOTUs as the reference set (this changes the interpretation of our parameter, it is now the log fold difference of the mOTU of interest relative to the typical log fold difference in the reference set. Here we choose the set of mOTUs in our previous model as the reference set.)
+
+This will take ~1 minute to run.
+
+```{r}
+fastEmu_test <- fastEmuFit(formula = ~ Group,
+                           data = wirbel_sample[ch_study_obs, ],
+                           Y = bigger_Y,
+                           # set comparison set to be set from earlier analysis
+                           reference_set = which(colnames(bigger_Y) %in% colnames(small_Y)),
+                           test_kj = data.frame(k = 2, j = taxa_to_test),
+                           # set lower tolerances than default
+                           # this means the estimates won't be *quite* as precise,
+                           # but it will run faster, which we want in this lab
+                           tolerance = 5e-3,
+                           constraint_tol = 1e-3)
+```
+
+Now we have estimates for all $758$ mOTUs, and robust score test results for the same mOTUs as earlier. One difference between `fastEmu` and `radEmu` is that `radEmu` would take much longer to run these robust score tests in the presence of $758$ mOTUS.
+
+```{r}
+fastEmu_test$coef[taxa_to_test, c("covariate", "category", "estimate", "pval")]
+```
+
+The results from these two score tests are nearly identical to the `radEmu` model.
+
+We recommend using `fastEmu` over `radEmu` when running differential abundance analyses for very large datasets. That said, you do need to choose a reference set to use `fastEmu`. This could be a set of taxa that you believe to be unchanging in abundance (in which case you can estimate fold-changes! i.e., not fold-changes-relative-to-something-else). If you don't have a set in mind, `fastEmu` can choose a data-driven reference set to be a small set of taxa whose estimated log fold-differences from `radEmu` are closest to the typical estimated log fold-difference. With this approach, the parameters chosen between `radEmu` and `fastEmu` will usually be nearly the same. 
+
+## Fitting other models
+
+While we like `radEmu`, it isn't the only differential abundance testing method that you can use. Let's see how these results relate to differential abundance methods implemented in other software packages. Note that each software will be testing different hypotheses with different models and different estimators.
+
+### ALDEx2
+
+`ALDEx2` is built to analyze RNA-seq data but can be used for microbiome data as well. 
+
+```{r, include=FALSE}
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+if (!("ALDEx2" %in% row.names(installed.packages()))) {
+  BiocManager::install("ALDEx2")
+}
+library(ALDEx2)
+# More information can be found in vignettes and in the papers cited here:
+citation("ALDEx2")
+```
+
+To start, we need to get our data into a form that `ALDEx2` will accept. 
+
+```{r}
+covariate <- wirbel_sample$Group[ch_study_obs]
+# aldex doesn't like a factor, so we will convert the covariate to TRUE/FALSE
+covariate_boolean <- ifelse(covariate == "CRC", TRUE, FALSE)
+X <- cbind(1, covariate_boolean)
+# swap rows and columns (ALDEx2 requires samples as columns)
+small_Y_transpose <- t(small_Y)
+```
+
+Now we're ready to run `ALDEx2`.
+
+```{r, message = FALSE}
+aldex_clr <- aldex.clr(small_Y_transpose, X, mc.samples=500, denom="all", verbose=FALSE)
+aldex_res <- aldex.glm(clr = aldex_clr, X)
+aldex_est <- aldex_res$`covariate_boolean:Est`
+aldex_pvals <- aldex_res$`covariate_boolean:pval`
+```
+
+### ANCOM-BC2
+
+`ANCOM-BC2` is a differential abundance method built specifically for microbiome data. 
+
+```{r, include=FALSE}
+if (!("ANCOMBC" %in% row.names(installed.packages()))) {
+  BiocManager::install("ANCOMBC")
+}
+library(ANCOMBC)
+# More information can be found in vignettes and in the papers cited here:
+citation("ANCOMBC")
+```
+
+`ANCOM-BC2` requires certain data formats. One option is a `TreeSummarizedExperiment` object.
+
+```{r, include=FALSE}
+if (!("TreeSummarizedExperiment" %in% row.names(installed.packages()))) {
+  BiocManager::install("TreeSummarizedExperiment")
+}
+library(TreeSummarizedExperiment)
+```
+
+We can start by making a `TreeSummarizedExperiment` object with our data.
+
+```{r}
+tse_data <- TreeSummarizedExperiment(assays = list("counts" = t(small_Y)),
+                                     colData = data.frame(Group = covariate))
+```
+
+Now we can run `ANCOM-BC2`.
+
+```{r, warning = FALSE}
+ancom_res <- ancombc2(data = tse_data,
+                      assay_name = "counts",
+                      fix_formula = "Group",
+                      prv_cut = 0)
+ancom_est <- ancom_res$res$lfc_GroupCRC
+ancom_pvals <- ancom_res$res$p_GroupCRC
+ancom_est
+```
+
+When we look at `ancom_est` we can see six estimates are recorded as `NA`. This is because `ANCOM-BC2` cannot compute estimates (nor perform inferences) for mOTUs that have all-zero counts in one of the covariate levels. This is one disadvantage of `ANCOM-BC2` not shared by `radEmu`.  
+
+### DESeq2
+
+`DESeq2` is another method that was built for RNA-seq data, but is commonly used for microbiome differential abundance analyses. Note that even the developer of DESeq2, Mike Love, recommends **against** DESeq2 for microbiome data because the assumptions aren't satistfied, and has previously endorsed StatDivLab tools for microbiome data. Thanks, Mike!! <3 
+
+```{r, include=FALSE}
+if (!("DESeq2" %in% row.names(installed.packages()))) {
+  BiocManager::install("DESeq2")
+}
+library(DESeq2)
+# More information can be found in vignettes and in the papers cited here:
+citation("DESeq2")
+```
+
+Now, we can run `DESeq2`. 
+
+```{r, message = FALSE}
+dds <- DESeqDataSetFromMatrix(countData = small_Y_transpose,
+                              colData = wirbel_sample[ch_study_obs, ],
+                              design = ~ Group)
+deseq_res <- DESeq(dds, sfType = "poscounts")
+deseq_results <- results(deseq_res)
+deseq_est <- deseq_results$log2FoldChange/log(2) 
+# note, we divide by log base 2 fold change by log 2 so that it will be on the same scale as the log fold changes from other methods that use a natural log
+deseq_pvals <- deseq_results$pvalue
+```
+
+### LinDA
+
+`LinDA` is a new microbiome-focused method that uses a log-ratio transformation after including pseudocounts. 
+
+```{r, include=FALSE}
+if (!("MicrobiomeStat" %in% row.names(installed.packages()))) {
+  install.packages("MicrobiomeStat")
+}
+library(MicrobiomeStat)
+# More information can be found in vignettes and in the papers cited here:
+citation("MicrobiomeStat")
+```
+
+Now, we can run `LinDA`. 
+
+```{r, message = FALSE}
+linda_res <- linda(feature.dat = small_Y_transpose, meta.dat = wirbel_sample[ch_study_obs, ],
+                   formula = "~ Group", feature.dat.type = "count", is.winsor = FALSE)
+linda_est <- linda_res$output$GroupCRC$log2FoldChange / log(2)
+# note, we divide by log base 2 fold change by log 2 so that it will be on the same scale as the log fold changes from other methods that use a natural log
+linda_pvals <- linda_res$output$GroupCRC$pvalue
+```
+
+## Comparing across methods
+
+Now that we've run each of these methods, let's compare the estimates and p-values. We'll start with the estimates. 
+
+```{r}
+data.frame(radEmu_est, aldex_est, ancom_est, deseq_est, linda_est) %>%
+  cor(use = "complete.obs")
+```
+
+What do you note about the relationship between estimates? Does this surprise you? Why or why not?
+
+Next, we can compare the p-values. 
+
+```{r}
+pval_df <- data.frame(mOTU = names(small_Y),
+  radEmu_pvals, aldex_pvals, ancom_pvals, deseq_pvals, linda_pvals)
+pval_df %>% dplyr::select(contains("pval")) %>%
+  cor(use = "complete.obs")
+```
+
+What do you note about the relationship between p-values? Does this surprise you? Why or why not?
+
+Finally, we can compute q-values (to control the false discovery rate across the $46$ tests we ran) and see which mOTUs each method finds to be significant. We'll use the `qvalue` package for this. 
+
+```{r, include = FALSE}
+if (!("qvalue" %in% row.names(installed.packages()))) {
+  BiocManager::install("qvalue")
+}
+library(qvalue)
+# More information can be found in vignettes and in the papers cited here:
+citation("qvalue")
+```
+
+```{r}
+qval_df <- pval_df %>%
+  mutate(radEmu_q = qvalue::qvalue(radEmu_pvals)$qvalues,
+         # we add pi0 = 1 because aldex and deseq p-values don't range from 0-1 as 'qvalue'
+         # expects, they instead range from 0 to ~0.85
+         aldex_q = qvalue::qvalue(aldex_pvals, pi0 = 1)$qvalues,
+         ancom_q = qvalue::qvalue(ancom_pvals)$qvalues,
+         deseq_q = qvalue::qvalue(deseq_pvals, pi0 = 1)$qvalues,
+         linda_q = qvalue::qvalue(linda_pvals)$qvalues) %>% 
+  dplyr::select(-contains("pvals")) %>%
+  pivot_longer(cols = 2:6, names_to = "method", values_to = "qval") 
+qval_df %>%
+  group_by(method) %>%
+  summarise(min(qval))
+qval_df %>%
+  group_by(method) %>%
+  summarise(sum(qval < 0.1))
+```
+
+Here we can see that the minimum q-value from `radEmu` is $0.12$, the minimum q-value from `ALDEx2` is $0.27$, the minimum q-value from `ANCOM-BC2` is $8.96e-8$, the minimum q-value from `DESeq2` is $1.55e-3$, and the minimum q-value from `LinDA` is $7.41e-6$. 
+
+Interpret the meaning of the minimum q-value from `radEmu` using your knowledge of the definition of a q-value. 
+
+This means that `ANCOM-BC2`, `DESeq2`, and `LinDA` find much stronger evidence for differential abundance for some mOTUs in our data (i.e. if we control the false discovery rate at $10\%$ we can make several discoveries), and `radEmu` and `ALDEx2` find weaker evidence (i.e. if we control the false discovery rate at $10\%$ we cannot make discoveries). 
+
+That said, in StatDivLab simulations, with large sample sizes `ANCOM-BC2`, `DESeq2`, and `LinDA` fail to control Type I error, which is why the StatDivLab would hesitate to claim "significant! FDR<0.1!" here. `radEmu` and `ALDEx2` do control Type I error, and don't find anything significant at the 10% FDR level here... there's just not enough strength of evidence at this stringency threshold...  
+
+Finally, we will compare the overlap between the mOTUs with the lowest q-values from `radEmu` and `ALDEx2`. 
+
+```{r}
+min_radEmu_q <- qval_df %>% filter(method == "radEmu_q") %>% arrange(qval) %>% pull(qval) %>% head(1)
+min_aldex_q <- qval_df %>% filter(method == "aldex_q") %>% arrange(qval) %>% pull(qval) %>% head(1)
+smallest_qval_df <- qval_df %>%
+  pivot_wider(names_from = method, values_from = qval) %>%
+  mutate(small_radEmu_q = ifelse(radEmu_q == min_radEmu_q, TRUE, FALSE),
+         small_aldex_q = ifelse(aldex_q == min_aldex_q, TRUE, FALSE)) %>%
+  filter(small_radEmu_q | small_aldex_q)
+sum(smallest_qval_df$small_radEmu_q == TRUE)
+# there are 6 mOTUs with the same smallest radEmu q value
+sum(smallest_qval_df$small_aldex_q == TRUE)
+# there are 9 mOTUs with the same smallest ALDEx2 q value
+sum(smallest_qval_df$small_radEmu_q & smallest_qval_df$small_aldex_q)
+# 3 of these mOTUs are the same 
+smallest_qval_df %>%
+  filter(small_radEmu_q & small_aldex_q) %>%
+  pull(mOTU)
+# these are those three mOTUs
+```
+
+Here we can identify three mOTUs that `radEmu` and `ALDEx2` agree are among the most significant in terms of q-values in the dataset. 
+
+## Conclusions 
+
+In this lab, we've compared several differential abundance methods: `radEmu`, `fastEmu`, `ALDEx2`, `ANCOM-BC2`, and `DESeq2`. We've seen that while there are strong correlations between the log fold difference estimates from each of these methods, there are weaker correlations between the p-values and different conclusions in terms of the most differentially abundant mOTUs. Each of these methods (and the many differential abundance methods that we didn't consider here) have pros and cons. An incomplete list includes the following: 
+
+- `radEmu`
+  - pros: has Type I error rate control in many situations, handles sparsity well
+  - cons: robust score tests are slow, especially in datasets with a large number of categories (taxa, genes, etc.)
+- `fastEmu`
+  - pros: inherits `radEmu` pros, is much faster than `radEmu` (especially with a large number of categories)
+  - cons: requires a comparison subset of categories, it still slower than several other methods 
+- `ALDEx2`
+  - pros: has Type I error rate control in many situations, faster than `radEmu` to test all categories
+  - cons: is pretty conservative (lower power)
+- `ANCOM-BC2`
+  - pros: high power, faster than `radEmu` to test all categories
+  - cons: fails to control Type I error rate in some situations, can't handle data separation (a common consequence of sparsity)
+- `DESeq2`
+  - pros: faster than `radEmu` to test all categories 
+  - cons: fails to control Type I error in some situations, tailored for RNA-seq data, not microbiome data
+- `LinDA`
+  - pros: faster than `radEmu` to test all categories, high power in some settings
+  - cons: fails to control Type I error in some situations (large sample sizes with sparse data), uses a pseudocount 
+
+Check out the documentation for each of these packages for more information and more practice using them. Although this example uses a single binary covariate, each of these methods can be run with more complex regression models. 

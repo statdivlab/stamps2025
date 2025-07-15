@@ -1,6 +1,6 @@
 ---
 title: "Introduction to R, STAMPS 2025"
-author: "Sarah Teichman"
+author: "Maria Valdez C., Sarah Teichman, Shirley Mathur"
 date: "2024-07-10"
 output: html_document
 ---
@@ -12,6 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Organization
 
 Welcome to R! The goal of this lesson is to level up your R skills, whether this is your first time using it or you're already a pro. This lesson is made up of five tutorials, each in a different .Rmd file within the "tutorials" folder. This document will be your guide, describing each tutorial and giving one or two practice questions for each topic. The tutorials build on each other, so start at the beginning if you're new to R, and if not then choose the first one with material new to you. We suggest that if you think you know the material from a tutorial, go through the exercises in this file anyway for additional practice. 
+
+In order to be prepared to use R in this course, we recommend that you work through at least tutorials 1 and 2. The rest will help you as you do your own data analyses, but are not necessary for the material taught in this course. 
 
 ## Tutorial 1: Data and data types
 
@@ -85,7 +87,7 @@ In this tutorial, we go through how to clean and reorganize data frames through 
 
 Exercises: 
 
-1. Read the "phylum_data" file in the "data" folder and create a new data frame in which you make a new column for the sum of counts of *Acidobacteria* and *Fusobacteria*, maintain only the "Location", "Month", "Season", "Type" and the new column you created, and retain only samples that have positive counts in the new column. 
+1. Read the "phylum_data" file in the "data" folder and create a new data frame in which you make a new column for the sum of counts of *Acidobacteria* and *Fusobacteria*, maintain only the variables "Location", "Month", "Season", "Type" and the new column you created, and retain only samples that have positive counts in the new column. 
 
 ```{r, eval = FALSE}
 phylum_data <- read.csv("data/phylum_data.txt", sep = "\t", row.names = 1, header = T)
