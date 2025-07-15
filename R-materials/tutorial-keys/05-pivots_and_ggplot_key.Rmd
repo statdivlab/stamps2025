@@ -56,8 +56,7 @@ Now, we will delve deeper into plotting with `ggplot2`.
  
 `ggplot2` (commonly just referred to as just ggplot) is a R package used to make high quality plots for your data. *ggplot2 is part of the tidyverse suite!* It offers consistent syntax and allows for detailed customization of almost every element of your plots. Visualization options range from bar graphs, boxplots, scatterplots, histograms and more. 
 
-First, we will summarise the total counts for each taxon across all of our samples using 
-the functions we learned from the `dplyr` tutorial.
+First, we will summarise the total counts for each taxon across all of our samples using the functions we learned from the `dplyr` tutorial.
 
 ```{r}
 phylum_summary <- phylum_data_long %>%
@@ -80,8 +79,7 @@ The two required arguments are `data` and `mapping`.
 
 We will start by using the `ggplot`function to make a plot, and setting the `data` argument to be `phylum_summary`, and then set the `mapping` argument to be `aes(x = taxon, y = count)` to give the aesthetics of our plot, specifying that we want the taxon labels on the x-axis and their total counts on the y-axis.
 
-The below code will create a plot that has no data on it, but just the aesthetics that
-we specified.
+The below code will create a plot that has no data on it, but just the aesthetics that we specified.
 
 ```{r}
 ggplot(phylum_summary, aes(x = taxon, y = count)) 
@@ -93,8 +91,7 @@ Using piping, this is equivalent to:
 phylum_summary %>% ggplot(aes(x = taxon, y = count)) 
 ```
 
-Now, say we want to make a scatter plot of our taxon counts. This is about the simplest
-plot we can make with `ggplot`.
+Now, say we want to make a scatter plot of our taxon counts. This is about the simplest plot we can make with `ggplot`.
 
 To do this, we will add a layer to our plot for a scatter plot, which is the
 `geom_point()` layer.
@@ -104,8 +101,7 @@ ggplot(phylum_summary, aes(x = taxon, y = count)) +
   geom_point()
 ```
 
-However, this plot is perhaps not the best way to show our data, as we are interested in plotting
-a summary of the counts. We could try using a bar plot instead.
+However, this plot is perhaps not the best way to show our data, as we are interested in plotting a summary of the counts. We could try using a bar plot instead.
 
 For a bar plot, we will now add a `geom_col()` layer instead of the point layer.
 
