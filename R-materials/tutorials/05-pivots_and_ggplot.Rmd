@@ -184,7 +184,7 @@ In the plot above, we can now see how the total taxon counts vary across the dif
 
 Now, it is time for you to practice!
 
-## Practice 1
+## Exercise
 
 Fill in the code below to make a faceted plot that plots the counts across different combinations of seasons and locations, and so that you have the different locations across the rows and different seasons across the columns.
 
@@ -202,7 +202,7 @@ phylum_summary %>%
   labs(title = "Taxon counts", x = "Taxon", y = "Count")
 ```
 
-# Practice 2
+## Exercise
 
 Earlier, we were looking at raw counts across different covariate values and plotting them using bar plots. 
 
