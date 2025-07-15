@@ -12,9 +12,9 @@ In this tutorial, we will go through working with data in R. We will see how to 
 
 ## File preparation 
 
-Before we load in our data, we need to make sure that we are in the correct working directory. Use the Files pane to locate the "intro_R" folder that you have opened from your zip file. 
+Before we load in our data, we need to make sure that we are in the correct working directory. Use the Files pane to locate the "R_workshop" folder that you have opened from your zip file. 
 
-Now, check your working directory by running `getwd()` in your console. Change your working directory to the "intro_R" folder with `setwd()` (also in your console). For example, if the output to `getwd()` is "/Users/you/Documents", you should run `setwd("intro_R")`. However, if you have saved your "intro_R" folder in a sub-folder of "Documents" called "STAMPS, you would run `setwd("STAMPS/intro_R")`. Check you're in the current folder by running `getwd()` again. Make sure appropriate folders "data" and "figures" are in the "intro_R" to access the documents necessary for this and other tutorials. 
+Now, check your working directory by running `getwd()` in your console. Change your working directory to the "R_workshop" folder with `setwd()` (also in your console). For example, if the output to `getwd()` is "/Users/you/Documents", you should run `setwd("R+workshop")`. However, if you have saved your "intro_R" folder in a sub-folder of "Documents" called "STAMPS, you would run `setwd("STAMPS/R_workshop")`. Check you're in the current folder by running `getwd()` again. Make sure appropriate folders "data" and "figures" are in the "R_workshop" to access the documents necessary for this and other tutorials. 
 
 ## Reading in data 
 

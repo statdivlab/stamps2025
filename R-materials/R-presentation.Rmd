@@ -122,7 +122,7 @@ Use the **editor** for opening and writing scripts.
 
 ## This session
 
-- download the "intro_R.zip" file [here](https://github.com/mblstamps/stamps2025/blob/main/day1/R_workshop.zip) and upload it to your remote RStudio instance
+- download the "R_workshop.zip" file [here](https://github.com/mblstamps/stamps2025/blob/main/day1/R_workshop.zip) and upload it to your remote RStudio instance
 - change your knit directory to be your "Current Directory" following the instructions below
   - in your RStudio instance, click "Tools" from the top bar, then "Global Options"
   - click on "R Markdown" in the left pane
