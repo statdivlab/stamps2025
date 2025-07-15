@@ -154,7 +154,7 @@ phylum_summary %>%
   labs(title = "Taxon counts", x = "Taxon", y = "Count")
 ```
 
-Now, we'll add another aesthetic, fill, which will let us fill in the bar color by a variable of interest. Here, we can consider subsetting counts based on location.
+Now, we'll add another aesthetic, `fill`, which will let us fill in the bar color by a variable of interest. Here, we can consider subsetting counts based on location.
 
 ```{r}
 phylum_summary %>% 
