@@ -188,16 +188,11 @@ Now, it is time for you to practice!
 
 ## Practice 1
 
-Fill in the code below to make a facet plot that plots the counts across different combinations
-of seasons and locations, and so that you have the different locations across the rows and different
-seasons across the columns.
+Fill in the code below to make a facet plot that plots the counts across different combinations of seasons and locations, and so that you have the different locations across the rows and different seasons across the columns.
 
 (Hint: edit the facet formula to facet across seasons and location)
 
-*Note: here, we are now using the `facet_grid` function rather than `facet_wrap`.
-This function is more useful when you want to facet across combinations of two variables,
-whereas `facet_wrap` is better when you have one variable to facet across and you want to specify
-how many rows, columns you want in your faceted plot.
+*Note: here, we are now using the `facet_grid` function rather than `facet_wrap`. This function is more useful when you want to facet across combinations of two variables, whereas `facet_wrap` is better when you have one variable to facet across and you want to specify how many rows, columns you want in your faceted plot.
 
 
 ```{r, eval=FALSE}
@@ -211,17 +206,13 @@ phylum_summary %>%
 
 # Practice 2
 
-Earlier, we were looking at raw counts across different covariate values and plotting 
-them using bar plots. 
+Earlier, we were looking at raw counts across different covariate values and plotting them using bar plots. 
 
-However, we might be interested in how different different taxon's counts change together.
-In particular, let's say we are interested in seeing how *Cyanobacteria* and *Proteobacteria*
-counts vary together. This is a setting where a scatterplot would be more useful.
+However, we might be interested in how different different taxon's counts change together. In particular, let's say we are interested in seeing how *Cyanobacteria* and *Proteobacteria* counts vary together. This is a setting where a scatterplot would be more useful.
 
 Use your `ggplot` skills to make this scatter plot using the `phylum_data` table.
 
-*Hint*: pipe the data into `ggplot`, set appropriate x and y aesthetics, and add an 
-appropriate plotting layer to make a scatter plot.
+*Hint*: pipe the data into `ggplot`, set appropriate x and y aesthetics, and add an appropriate plotting layer to make a scatter plot.
 
 ```{r}
 phylum_data %>% ggplot(aes(x = Proteobacteria, y = Cyanobacteria)) +
