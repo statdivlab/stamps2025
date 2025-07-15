@@ -48,7 +48,6 @@ Download [here](https://posit.co/download/rstudio-desktop/).
 - find your personal R Studio server link from [this spreadsheet](https://github.com/mblstamps/stamps2025/wiki/accessing-our-cloud-computers)
 - username: stamps
 - password: stamps2025
-* note - check on these links and username/password!!!
 
 ## RStudio organization 
 
