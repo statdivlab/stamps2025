@@ -183,8 +183,10 @@ Because a data frame has rows and columns, if we want to subset from it we need 
 ```{r}
 # get the 1st observation of the 3rd variable 
 covariates[1, 3]
-# get the 2nd observation of the last three variables 
+#Learn the number of columns and what they contain
 ncol(covariates)
+colnames(covariates)
+# get the 2nd observation of the last three variables 
 covariates[2, 3:5]
 # get all observations for the 1st variable 
 covariates[, 1]
