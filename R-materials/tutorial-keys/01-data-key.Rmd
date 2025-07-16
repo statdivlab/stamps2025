@@ -199,7 +199,7 @@ covariates$Season[4]
 Exercise: Extract the value from the 5th observation of `covariates` for the variable "Month." 
 
 ```{r}
-covariates$Month[5]                                                                                   
+covariates$Month[5]                                                                                 
 ```
 
 Challenge exercise: What is the count of "Bacteria;Acidobacteria;Holophagae;Holophagales;Holophagaceae;Geothrix" for the first observation listed in the `covariates` data frame collected in "Summer"? 
@@ -207,6 +207,10 @@ Challenge exercise: What is the count of "Bacteria;Acidobacteria;Holophagae;Holo
 ```{r}
 covariates$Season # note that the 3rd observation is the first one from the summer
 otus["Bacteria;Acidobacteria;Holophagae;Holophagales;Holophagaceae;Geothrix", 3]
+
+# or you could use R to pull out the index you need
+ind <- which(covariates$Season == "Summer")[1]
+otus["Bacteria;Acidobacteria;Holophagae;Holophagales;Holophagaceae;Geothrix", ind]
 ```
 
 Answer: there are $0$ counts of "Bacteria;Acidobacteria;Holophagae;Holophagales;Holophagaceae;Geothrix" for the first observation from the summer.

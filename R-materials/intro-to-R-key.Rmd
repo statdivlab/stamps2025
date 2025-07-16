@@ -98,7 +98,7 @@ In this tutorial, we go through how to clean and reorganize data frames through 
 
 Exercises: 
 
-1. Read the "phylum_data" file in the "data" folder and create a new data frame in which you make a new column for the sum of counts of *Acidobacteria* and *Fusobacteria*, maintain only the variables "Location", "Month", "Season", "Type" and the new column you created, and retain only samples that have positive counts in the new column. 
+1. Read the "phylum_data" file in the "data" folder and create a new data frame in which you make a new column for the sum of counts of *Acidobacteria* and *Fusobacteria* within each sample, maintain only the variables "Location", "Month", "Season", "Type" and the new column you created, and retain only samples that have positive counts in the new column. 
 
 ```{r, eval = FALSE}
 phylum_data <- read.csv("data/phylum_data.txt", sep = "\t", row.names = 1, header = T)
