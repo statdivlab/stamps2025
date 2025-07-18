@@ -161,7 +161,7 @@ There seem to be two observations for each value on the x-axis. Why might that b
 
 It turns out, saliva and sputum samples are paired (one each for each subject), and so share a value of FEV1! Whoops - we forgot about this - or maybe the postdoc left and we weren't told. 
 
-Insights like this from our plot might lead us to analyze our data. 
+Insights like this from our plot will give us an idea of what covariates may be relevant in our regression model
 
 ## Fitting regression models
 
@@ -188,7 +188,7 @@ We have two rows in the "Coefficients" table. The first row refers to the "inter
 
 We have 4 columns. The first column gives the estimate of the parameter, and the second column gives its standard error (remember, this is an estimate of the standard deviation of our estimate). 
 
-`lm` will by default test the hypothesis that the coefficient for each covariate is equal to 0. If this hypothesis is rejected, we conclude that there is an association between our covariate and outcome (after accounting for other covariates). The third column of our output gives the test statistic for that hypothesis test, and the fourth column gives a p-value. 
+By default, `lm` will run hypothesis tests for each regression parameter in the model. In a linear model, this means that for each covariate (or covariate level), it will test the hypothesis that the expected difference in the outcome associated with a one unit increase in that covariate, when holding all other covariates equal, is equal to 0. The third column of the coefficient table output gives a test statistic for this hypothesis, and the fourth column provides a p-value. 
 
 What does the second row of the output tell us? 
 
@@ -196,10 +196,10 @@ Our estimate of 1,006,955 for the coefficient for `Sample Type`Sputum tells us t
 
 We have a p-value of 0.01. If we use a alpha level of 0.05, we reject the null hypothesis that there is no difference in the true mean concentration in sputum and saliva samples. 
 
-Now, let's fit a model with multiple covariates. Let's consider `Treatment Group` and `Sample Type`. Write the proper model below, using `+` to connect covariates
+Now, let's fit a model with multiple covariates. Let's consider `Treatment Group` and `Sample Type`. In order to fit this model, add the right hand side of the formula below, using the `+` operator to add a second covariate. 
 
 ```{r}
-mod_treat_type <- lm(ddpcr ~ , data = both)
+mod_treat_type <- lm(ddpcr ~ *add formula here*, data = both)
 summary(mod_treat_type)
 ```
 
@@ -207,18 +207,18 @@ How would we interpret these results?
 
 Here, we have a significant difference in average DNA copies/ml across sample types (at the alpha=0.05 level), but not across treatment groups. 
 
-What if we think there is an interaction between the effects of treatment and sample type on ddpcr? i.e., a **different difference** in bacterial load ON compared to OFF treatment for Sputum and Saliva biomes. 
+What if we think there is an interaction between the effects of treatment and sample type on ddpcr? i.e., we think that the difference in mean bacterial concentration between samples from sputum vs saliva from participants in the treatment group is not the same as the difference in mean bacterial concentration between samples from sputum vs saliva from participants in the control group?
 
-We can fit an interaction model by replacing the `+` above with `*`.
+We can fit an interaction model by replacing the `+` above with `:`.
 
 ```{r}
-mod_interact <- lm(both, ddpcr ~ Sample Type * Treatment Group)
+mod_interact <- lm(both, ddpcr ~ Sample Type + Treatment Group + Sample Type : Treatment Group)
 summary(mod_interact)
 ```
 
 Now we have an extra row. Not only do we have rows for `Sample Type`Sputum and Treatment, but we also have an interaction row. The estimate for the interaction can be interpreted as the following: 
 
--349,375 is the estimated value of the difference in mean bacterial concentration in sputum for people on antibiotics compared to people not on antibiotics minus the difference in mean bacterial concentration in saliva for people on antibiotics compared to people not on antibiotics.
+The difference in mean bacterial concentration in saliva for people on antibiotics compared to people not on antibiotics is 349,375 cells more than the difference in mean bacterial concentration in sputum for people on antibiotics compared to people not on antibiotics. 
 
 Note that our estimates and standard errors for `Sample Type`Sputum and `Treatment Group`ON are different for our two models. This is because whenever we change something (add a covariate, add an interaction, etc) we are fitting a different model. Our strongest advice on the subject of "which model to choose?" is to be motivated by your scientific question, and consider the classification of variables presented in the lecture: predictor of interest (always include), precision variables (good to include most important ones), confounders (always include, but use the actual definition, not the way most people talk about it) and relevant effect modifiers (include if scientifically relevant)). 
 
