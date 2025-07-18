@@ -253,3 +253,105 @@ coef(My_own_mod)
 
 And then provide an interpretation on your results: 
 
+## Using `dagify` to determine adjustment sets 
+
+As we discussed in the lecture, drawing causal diagrams (DAGs) can help you encode your assumptions about the covariates in your data and decide which to include in your model. Here, we will work through some examples. First, we need to install the `dagitty` and `ggdag` packages (if you don't already have them) and load them.
+
+```{r}
+# install dagitty (only if you don't already have it installed)
+if (!("dagitty" %in% row.names(installed.packages()))) {
+  install.packages("dagitty")
+}
+library(dagitty)
+# install ggdag (only if you don't already have it installed)
+if (!("ggdag" %in% row.names(installed.packages()))) {
+  install.packages("ggdag")
+}
+library(ggdag)
+```
+
+### Scenario 1
+
+Let's start with the example from the slides. Imagine that you are considering the exposure of disease, the outcome of microbe abundance, and you have also measured age, diet, and antibiotic use. You believe that age causes disease and microbe abundance, diet causes disease and microbe abundance, and disease causes antibiotic use which causes microbe abundance. 
+
+We can use `dagify` to make this DAG object in R, and then can use `adjustment_sets` to see what some reasonable adjustment sets would be for this scenario. 
+
+```{r}
+dag1 <- dagify(
+  abundance ~ age + diet + disease + antibiotic, # describe all causes of microbe abundance
+  disease ~ age + diet, # describe all causes of disease 
+  exposure = "disease",
+  outcome = "abundance"
+)
+# plot this DAG 
+ggdag(dag1, text = FALSE) +
+  theme_dag() + 
+  geom_dag_label(size = 3, alpha = 0.7)
+```
+
+Now, lets use `adjustmentSets()` to look at the minimal adjustment sets, i.e. the set of covariates that we should include to avoid biasing our parameter estimates. 
+
+```{r}
+adjustmentSets(dag1, type = "minimal") 
+adjustmentSets(dag1, type = "canonical") 
+```
+
+In the first call to `adjustmentSets` we use `type = "minimal"`, saying that we want the smallest set of covariates to avoid biasing our parameter estimates. This includes the two confounder covariates age and diet, but avoids the precision covariate antibiotic use. 
+
+In the second call to `adjustmentSets` we use `type = "canonical"`, saying that we want a single set and it does not have to be the smallest one. This includes the two confounders of age and diet, as well as the precision covariate antibiotic use. 
+
+If you were running this analysis, you could decide how complex you wanted your model to be, and whether or not you wanted to include antibiotic use. 
+
+### Scenario 2 
+
+Consider a very similar situation, however now you have reason to believe that disease causes antibiotic use. Let's adjust our DAG to encode this. 
+
+```{r}
+dag2 <- dagify(
+  abundance ~ age + diet + disease + antibiotic, # describe all causes of microbe abundance
+  disease ~ age + diet, # describe all causes of disease 
+  antibiotic ~ disease, # describe all causes of antibiotic resistance 
+  exposure = "disease",
+  outcome = "abundance"
+)
+# plot this DAG 
+ggdag(dag2, text = FALSE) +
+  theme_dag() + 
+  geom_dag_label(size = 3, alpha = 0.7)
+```
+
+Again, lets use `adjustmentSets()` to look at the adjustment sets. 
+
+```{r}
+adjustmentSets(dag2, type = "minimal", effect = "total") 
+adjustmentSets(dag2, type = "canonical", effect = "total")
+adjustmentSets(dag2, type = "minimal", effect = "direct")
+```
+
+Now, the results are a little different. The argument `effect` tells us the type of effect we're looking for, `total` means that we care about the effect of disease on microbe abundance through both direct causal pathways and indirect pathways (including the path from disease to antibiotic use to microbe abundance). Typically, unless otherwise specified, we ask questions about the total effect. When we want the total effect, we should avoid including antibiotic use in our adjustment set, because if we account for it separately then we won't be able to include it in our disease effect. 
+
+However, if we want the direct effect, i.e. only the effect of disease on microbe abundance through the direct path, not the indirect effect through antibiotic use, then we can use `effect = "direct"`. This adjustment set does include age, diet, and antibiotic use. 
+
+### Scenario 3 
+
+The growth rate of bacteria can be impacted by temperature. You observe that the transcript abundance of the common cell division ftsZ gene changes based on ocean temperature, and want to study this effect. You also observe that transcript abundance of the ftsZ gene is affected by time of day. Additionally, both ocean temperature and the abundance of organisms carrying the ftsZ gene are affected by season. Ocean temperature also affects nutrient concentrations, which in turn affects the abundance of organisms carrying gene A. 
+
+Use `dagify` to make a DAG object for this scenario, `ggdag` to visualize this DAG, and then `adjustmentSets()` to consider what covariates to include. You can decide what `type` of set you want, and whether you care about the direct or total `effect`. 
+
+```{r}
+dag3 <- dagify(
+  # causes for one variable
+  # causes for another variable 
+  # causes for ...
+  exposure = ,
+  outcome = 
+)
+# plot this DAG 
+ggdag(dag3, text = FALSE) +
+  theme_dag() + 
+  geom_dag_label(size = 3, alpha = 0.7)
+# get adjustment sets
+adjustmentSets(dag3, type = "...", effect = "...")
+```
+
+What set did you choose? Why?
