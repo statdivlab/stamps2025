@@ -2,7 +2,9 @@
 title: "lm-ggplot-lab"
 author: "Amy Willis, Sarah Teichman and Maria Valdez"
 date: "2024-07-23"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -161,7 +163,7 @@ There seem to be two observations for each value on the x-axis. Why might that b
 
 It turns out, saliva and sputum samples are paired (one each for each subject), and so share a value of FEV1! Whoops - we forgot about this - or maybe the postdoc left and we weren't told. 
 
-Insights like this from our plot might lead us to analyze our data. 
+Insights like this from our plot will give us an idea of what covariates may be relevant in our regression model.
 
 ## Fitting regression models
 
@@ -188,7 +190,7 @@ We have two rows in the "Coefficients" table. The first row corresponds with the
 
 We have 4 columns. The first column gives the estimate of the coefficient for the intercept or covariate within the row. The second column gives the standard error (remember, this is an estimate of the standard deviation of our estimate). 
 
-`lm` will by default run a hypothesis test with the hypothesis that the coefficient for each covariate is equal to 0. If this hypothesis is rejected, we determine that there is statistically significant relationship between our covariate and outcome (after accounting for other covariates). The third column of our output gives the test statistic for that hypothesis test, and the fourth column gives a p-value. 
+By default, `lm` will run hypothesis tests for each regression parameter in the model. In a linear model, this means that for each covariate (or covariate level), it will test the hypothesis that the expected difference in the outcome associated with a one unit increase in that covariate, when holding all other covariates equal, is equal to 0. The third column of the coefficient table output gives a test statistic for this hypothesis, and the fourth column provides a p-value.  
 
 What does the second row of the output tell us? 
 
@@ -207,18 +209,19 @@ How would we interpret these results?
 
 Here, we have a significant difference in mean ddPCR across sample types (at the alpha=0.05 level), but not across treatment groups. 
 
-What if we think there is an interaction between the effects of treatment and sample type on ddpcr? i.e., a different change between treatment ON and OFF for sputum vs saliva. 
+What if we think there is an interaction between the effects of treatment and sample type on ddpcr? i.e., we think that the difference in mean bacterial concentration between samples from sputum vs saliva from participants in the treatment group is not the same as the difference in mean bacterial concentration between samples from sputum vs saliva from participants in the control group?
 
-We can fit an interaction model by replacing the `+` above with `*`.
+We can fit an interaction model by replacing the `+` above with `:`.
 
 ```{r}
-mod_interact <- lm(ddpcr ~ `Sample Type` * `Treatment Group`, both) # Corrected typos and orders of arguments
+mod_interact <- lm(ddpcr ~ `Sample Type` + `Treatment Group` + 
+                     `Sample Type` : `Treatment Group`, both) # Corrected typos and orders of arguments
 summary(mod_interact)
 ```
 
 Now we have an extra row. Not only do we have rows for `Sample Type`Sputum and Treatment, but we also have an interaction row. The estimate for the interaction can be interpreted as the following: 
 
--349,375 is the estimated value of the difference in mean bacterial concentration in sputum for people on antibiotics compared to people not on antibiotics minus the difference in mean bacterial concentration in saliva for people on antibiotics compared to people not on antibiotics.
+The difference in mean bacterial concentration in saliva for people on antibiotics compared to people not on antibiotics is 349,375 cells more than the difference in mean bacterial concentration in sputum for people on antibiotics compared to people not on antibiotics. 
 
 Note that our estimates and standard errors for `Sample Type`Sputum and `Treatment Group`ON are different for our two models. This is because whenever we change something (add a covariate, add an interaction, etc) we are fitting a different model. Our strongest advice on the subject of "which model to choose?" is to be motivated by your scientific question, and consider the classification of variables presented in the lecture: predictor of interest (always include), precision variables (good to include most important ones), confounders (always include, but use the actual definition, not the way most people talk about it) and relevant effect modifiers (include if scientifically relevant)). 
 
@@ -245,7 +248,7 @@ Now create your own model, by selecting:
 2. How are you interested in exploring these associations? 
 Include your fitted model here: 
 
-```{r}
+```{r, eval = FALSE}
 My_own_mod <- 
   
 coef(My_own_mod)
@@ -340,18 +343,20 @@ Use `dagify` to make a DAG object for this scenario, `ggdag` to visualize this D
 
 ```{r}
 dag3 <- dagify(
-  # causes for one variable
-  # causes for another variable 
-  # causes for ...
-  exposure = ,
-  outcome = 
+  abundance ~ temp + day + season + nutrient,
+  temp ~ season,
+  nutrient ~ temp,
+  exposure = "temp",
+  outcome = "abundance"
 )
-# plot this DAG 
+# plot this DAG
 ggdag(dag3, text = FALSE) +
-  theme_dag() + 
+  theme_dag() +
   geom_dag_label(size = 3, alpha = 0.7)
 # get adjustment sets
-adjustmentSets(dag3, type = "...", effect = "...")
+adjustmentSets(dag3, type = "minimal", effect = "total")
+adjustmentSets(dag3, type = "canonical", effect = "total")
+adjustmentSets(dag3, type = "minimal", effect = "direct")
 ```
 
 What set did you choose? Why?
