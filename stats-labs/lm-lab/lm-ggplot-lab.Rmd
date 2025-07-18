@@ -50,7 +50,7 @@ both <- meta %>%
   inner_join(ddpcr, by = "sample_name") 
 ```
 
-Next, we will manipulate our data to make it easier to work with. We'll rename the variable `Average Replicates, stock DNA (copies /µl)` (remember, we like variable names to be concise and avoid spaces) and tell R that this variable is a number(removing the commas in the process). 
+Next, we will manipulate our data to make it easier to work with. We'll rename the variable `Average Replicates, stock DNA (copies /µl)` (remember, we like variable names to be concise and avoid spaces) and tell R that this variable is a number (removing the commas in the process). 
 
 We'll define FEV1 to be a numeric variable as well.
 
@@ -167,7 +167,7 @@ Insights like this from our plot might lead us to analyze our data.
 
 Now, let's look at the association between digital PCR measurements and whether the sample is from saliva or sputum. We'll use the `lm` command. 
   
-Note that by fitting a linear model, we are targeting a parameter that represents differences in means. We could also choose to target a parameter that represents fold-differences in means. We'll see an example of this at the end of the lab. Both options are valid, as long as you correctly interpret the coefficients in terms of the model that you've chosen. This decision is driven by which parameter is more relevant to your scientific question.    
+Note that by fitting a linear model, we are targeting a parameter that represents differences in means. We could also choose to target a parameter that represents fold-differences in means. We'll see an example of this at the end of the lab. Either option is valid, as long as you correctly interpret the coefficients in terms of the model that you've chosen. The decision about which model to choose should be motivated by your preferred interpretation of your results: "Would I rather say that the outcome is B units higher, or C percent higher?" (Recall the discussion from lecture.)
 
 We use `lm` to fit the linear model. 
 
@@ -184,11 +184,11 @@ To look at the results of our model, we can use the function `summary`
 
 How do we interpret the previous output? 
 
-We have two rows in the "Coefficients" table. The first row corresponds with the intercept of our model. The following rows correspond with covariates. 
+We have two rows in the "Coefficients" table. The first row refers to the "intercept" of our model (the estimate if all covariates equal zero). The following rows correspond with covariates. Let's walk through them. 
 
-We have 4 columns. The first column gives the estimate of the coefficient for the intercept or covariate within the row. The second column gives the standard error (remember, this is an estimate of the standard deviation of our estimate). 
+We have 4 columns. The first column gives the estimate of the parameter, and the second column gives its standard error (remember, this is an estimate of the standard deviation of our estimate). 
 
-`lm` will by default run a hypothesis test with the hypothesis that the coefficient for each covariate is equal to 0. If this hypothesis is rejected, we determine that there is statistically significant relationship between our covariate and outcome (after accounting for other covariates). The third column of our output gives the test statistic for that hypothesis test, and the fourth column gives a p-value. 
+`lm` will by default test the hypothesis that the coefficient for each covariate is equal to 0. If this hypothesis is rejected, we conclude that there is an association between our covariate and outcome (after accounting for other covariates). The third column of our output gives the test statistic for that hypothesis test, and the fourth column gives a p-value. 
 
 What does the second row of the output tell us? 
 
@@ -205,9 +205,9 @@ summary(mod_treat_type)
 
 How would we interpret these results? 
 
-Here, we have a significant difference in mean ddPCR across sample types (at the alpha=0.05 level), but not across treatment groups. 
+Here, we have a significant difference in average DNA copies/ml across sample types (at the alpha=0.05 level), but not across treatment groups. 
 
-What if we think there is an interaction between the effects of treatment and sample type on ddpcr? i.e., a different change between treatment ON and OFF for sputum vs saliva. 
+What if we think there is an interaction between the effects of treatment and sample type on ddpcr? i.e., a **different difference** in bacterial load ON compared to OFF treatment for Sputum and Saliva biomes. 
 
 We can fit an interaction model by replacing the `+` above with `*`.
 
@@ -236,7 +236,7 @@ coef(mod_counts_type)
 
 How do we interpret these coefficients? 
 
-By exponentiating the estimated coefficient (`exp(0.73)` = 2.08), we can say that the mean ddPCR measurement observed for samples of Sputum is 2.08 times higher than the mean ddPCR measurement for samples of saliva. A p-value of 0.01 (at an alpha level of 0.05) indicates we have enough evidence to reject the hypothesis that there is no fold-difference in ddPCR measurements between sputum and saliva samples.
+By exponentiating the estimated coefficient (`exp(0.73)` = 2.08), we can say that the mean ddPCR measurement observed for samples of Sputum is 2.08 times higher than the mean ddPCR measurement for samples of saliva. A p-value of 0.01 indicates we have enough evidence to reject the hypothesis that there is no fold-difference in ddPCR measurements between sputum and saliva samples (at an alpha level of 0.05).
 
 Now create your own model, by selecting:
 
