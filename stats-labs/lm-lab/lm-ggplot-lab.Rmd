@@ -196,7 +196,7 @@ Our estimate of 1,006,955 for the coefficient for `Sample Type`Sputum tells us t
 
 We have a p-value of 0.01. If we use a alpha level of 0.05, we reject the null hypothesis that there is no difference in the true mean concentration in sputum and saliva samples. 
 
-Now, let's fit a model with multiple covariates. Let's consider `Treatment Group` and `Sample Type`. In order to fit this model, add the right hand side of the formula below, using the `+` operator to add a second covariate. 
+Now, let's fit a model with multiple covariates. Let's consider `Treatment Group` and `Sample Type`. In order to fit this model, add to the right hand side of the formula below, using the `+` operator to add a second covariate. 
 
 ```{r}
 mod_treat_type <- lm(ddpcr ~ *add formula here*, data = both)
