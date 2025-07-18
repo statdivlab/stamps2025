@@ -300,7 +300,7 @@ In the first call to `adjustmentSets` we use `type = "minimal"`, saying that we 
 
 In the second call to `adjustmentSets` we use `type = "canonical"`, saying that we want a single set and it does not have to be the smallest one. This includes the two confounders of age and diet, as well as the precision covariate antibiotic use. 
 
-If you were running this analysis, you could decide how complex you wanted your model to be, and whether or not you wanted to include antibiotic use. 
+If you were running this analysis, you could decide how complex you wanted your model to be, and whether or not you wanted to include antibiotic use. The StatDivLab would generally recommend including precision variables (here, antibiotic use) in small models, but if the model was much larger or the dataset smaller, we might only include the most important few precision variables.
 
 ### Scenario 2 
 
