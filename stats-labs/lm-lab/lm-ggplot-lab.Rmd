@@ -334,7 +334,7 @@ However, if we want the direct effect, i.e. only the effect of disease on microb
 
 ### Scenario 3 
 
-The growth rate of bacteria can be impacted by temperature. You observe that the transcript abundance of the common cell division ftsZ gene changes based on ocean temperature, and want to study this effect. You also observe that transcript abundance of the ftsZ gene is affected by time of day. Additionally, both ocean temperature and the abundance of organisms carrying the ftsZ gene are affected by season. Ocean temperature also affects nutrient concentrations, which in turn affects the abundance of organisms carrying gene A. 
+The growth rate of bacteria can be impacted by temperature. You observe that the transcript abundance of the common cell division ftsZ gene changes based on ocean temperature, and want to study this effect. You also observe that transcript abundance of the ftsZ gene is affected by time of day. Additionally, both ocean temperature and the abundance of organisms carrying the ftsZ gene are affected by season. Ocean temperature also affects nutrient concentrations, which in turn affects the abundance of organisms carrying gene ftsZ. 
 
 Use `dagify` to make a DAG object for this scenario, `ggdag` to visualize this DAG, and then `adjustmentSets()` to consider what covariates to include. You can decide what `type` of set you want, and whether you care about the direct or total `effect`. 
 
