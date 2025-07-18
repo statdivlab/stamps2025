@@ -1,7 +1,7 @@
 ---
-title: "lm-ggplot-lab"
+title: "Regression: fitting and interpretation"
 author: "Amy Willis, Sarah Teichman and Maria Valdez"
-date: "2024-07-23"
+date: "2025-07-21"
 output: html_document
 ---
 
@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-In this lab, we'll practice running linear regression with the function `lm`. 
+In this lab, we'll practice running linear regression with the functions `lm` and `regress`. 
 We'll also manipulate our data with the functions from the `tidyverse` and plot our data with `ggplot`.
 
 WARNING!!: There will be a few intentional errors here for you to fix (so you can practice debugging!). If a line of code isn't working, think about how you can fix it to make it work. 
