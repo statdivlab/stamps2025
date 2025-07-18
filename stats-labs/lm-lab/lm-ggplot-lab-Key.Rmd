@@ -82,15 +82,15 @@ names(both)
 
 We'll be focusing on a few variables from this dataset: ddpcr, FEV1, Treatment Group, Sample Type, and Subject ID. 
 
-ddpcr: droplet digital PCR, giving the observed total bacterial load in the sample in copies/uL
+- ddpcr: droplet digital PCR, giving the observed total bacterial load in the sample in copies/uL
 FEV1: Forced expiratory volume (FEV) measures how much air a person can exhale during a forced breath (L/s)
-Treatment Group: "ON" if the sample is from a subject receiving antibiotics, "OFF" otherwise 
-Sample Type: the body site of origin of the sample, either Saliva or Sputum
-Subject ID: an ID identifying the participant 
+- Treatment Group: "ON" if the sample is from a subject receiving antibiotics, "OFF" otherwise 
+- Sample Type: the body site of origin of the sample, either saliva or sputum
+- Subject ID: an ID identifying the participant 
 
 Before we do inference, we should plot our data. This lets us get a sense of general trends and build intuition about our data. 
 
-We'll use ggplot for plotting. Remember that in ggplot we start with the base of our plot, where we specify our dataset and variables, and then we can build up our plot by adding layers with the `+` operator. We'll build this first plot step by step.
+We'll use `ggplot` for plotting. Remember that in `ggplot` we start with the base of our plot, where we specify our dataset and variables, and then we can build up our plot by adding layers with the `+` operator. We'll build this first plot step by step.
 
 ```{r}
 ggplot(data = both, aes(x = `Sample Type`, y = ddpcr, col = `Subject ID`))
@@ -103,7 +103,7 @@ ggplot(data = both, aes(x = `Sample Type`, y = ddpcr, col = `Subject ID`)) +
   geom_jitter(height = 0, width = 0.3)
 ```
 
-geom_jitter is a great way to make a scatterplot with a categorical variable on the x-axis. It spreads the points out so that they do not all line up exactly for the same values of x. You can change the width value to see how it changes the appearance of the plot.
+`geom_jitter` is a great way to make a scatter plot with a categorical variable on the x-axis. It spreads the points out so that they do not all line up exactly for the same values of x. You can change the width value to see how it changes the appearance of the plot.
 
 We like to add informative labels with the `labs` layer to improve on our variable names. Select proper names for the y-axis and the title of the plot below (don't forget to use quotation marks!):
 
@@ -115,7 +115,7 @@ ggplot(data = both, aes(x = `Sample Type`, y = ddpcr, col = `Subject ID`)) +
 ```
 
 
-ggplot by default left-justifies titles. The theme layer centers the title. Add `theme(plot.title = element_text(hjust = 0.5))` to improve the look of your plot above.
+`ggplot` by default left-justifies titles. The theme layer centers the title. Add `theme(plot.title = element_text(hjust = 0.5))` to improve the look of your plot above.
 
 The ddpcr data is skewed, with a few larger outliers taking up a lot of space on our plot. We can transform ddpcr to the log of ddpcr to visualize this in a  different way.
 
@@ -128,6 +128,7 @@ ggplot(data = both, aes(x = `Sample Type`, y = ddpcr, col = `Subject ID`)) +
 ```
 
 What do we learn from this plot? 
+
 It seems that there are sputum samples generally have higher concentration (ddPCR) values than saliva samples.
 
 ```{r}
@@ -140,6 +141,7 @@ ggplot(data = both, aes(x = `Treatment Group`, y = ddpcr, col = `Subject ID`))  
 ```
 
 What do we learn from this plot? 
+
 There are a lot more non-treated samples than treated samples. The general trend seems to be higher observed concentration values from non-treated samples than treated samples.
 
 ```{r}
@@ -165,7 +167,7 @@ Insights like this from our plot might lead us to analyze our data.
 
 Now, let's look at the association between digital PCR measurements and whether the sample is from saliva or sputum. We'll use the `lm` command. 
   
-Note that we are deciding to model the mean of our outcome on the linear scale. We could also choose to model the log of the mean of this variable. We will see an example of this at the end of this lab. Both options are valid, as long as you interpret the coefficients in terms any transformations you've done. This decision is driven by which model you believe to reflect reality better. 
+Note that by fitting a linear model, we are targeting a parameter that represents differences in means. We could also choose to target a parameter that represents fold-differences in means. We'll see an example of this at the end of the lab. Both options are valid, as long as you correctly interpret the coefficients in terms of the model that you've chosen. This decision is driven by which parameter is more relevant to your scientific question.    
 
 We use `lm` to fit the linear model. 
 
@@ -184,15 +186,15 @@ How do we interpret the previous output?
 
 We have two rows in the "Coefficients" table. The first row corresponds with the intercept of our model. The following rows correspond with covariates. 
 
-We have 4 columns. The first column gives the estimate of the coefficient for the intercept or covariate on the row. The second column gives the standard error (remember, this is an estimate of the standard deviation of our estimate). 
+We have 4 columns. The first column gives the estimate of the coefficient for the intercept or covariate within the row. The second column gives the standard error (remember, this is an estimate of the standard deviation of our estimate). 
 
-`lm` will by default run a hypothesis test with the hypothesis that the coefficient for each covariate is equal to 0. If this hypothesis is rejected, we determine that there is statistically significant relationship between our covariate and outcome. The third column of our output gives the test statistic for that hypothesis test, and the fourth column gives a p-value. 
+`lm` will by default run a hypothesis test with the hypothesis that the coefficient for each covariate is equal to 0. If this hypothesis is rejected, we determine that there is statistically significant relationship between our covariate and outcome (after accounting for other covariates). The third column of our output gives the test statistic for that hypothesis test, and the fourth column gives a p-value. 
 
 What does the second row of the output tell us? 
 
-Our estimate of 1,006,955 for the coefficient for `Sample Type`Sputum tells us that the estimated mean observed ddPCR reading for a sample of sputum is 1,000,955 counts/uL higher than the estimated mean observed ddPCR for a sample from saliva. 
+Our estimate of 1,006,955 for the coefficient for `Sample Type`Sputum tells us that the estimated mean ddPCR measurement for a sample of sputum is 1,000,955 counts/uL higher than the estimated mean ddPCR measurement for a sample from saliva. 
 
-We have a p-value of 0.01. If we use a alpha level of 0.05, we reject the null hypothesis that there is no difference in the true mean concentration in Sputum and Saliva samples. 
+We have a p-value of 0.01. If we use a alpha level of 0.05, we reject the null hypothesis that there is no difference in the true mean concentration in sputum and saliva samples. 
 
 Now, let's fit a model with multiple covariates. Let's consider `Treatment Group` and `Sample Type`. Write the proper model below, using `+` to connect covariates
 
@@ -202,9 +204,10 @@ summary(mod_treat_type)
 ```
 
 How would we interpret these results? 
-Here, we have a significant difference in mean ddPCR across Sample Types (at the alpha=0.05 level), but not across Treatment groups. 
 
-What if we think there is an interaction between the effects of Treatment and Sample Type on ddpcr? i.e., a different change between Treatment ON and OFF for Sputum vs Saliva. 
+Here, we have a significant difference in mean ddPCR across sample types (at the alpha=0.05 level), but not across treatment groups. 
+
+What if we think there is an interaction between the effects of treatment and sample type on ddpcr? i.e., a different change between treatment ON and OFF for sputum vs saliva. 
 
 We can fit an interaction model by replacing the `+` above with `*`.
 
@@ -219,7 +222,7 @@ Now we have an extra row. Not only do we have rows for `Sample Type`Sputum and T
 
 Note that our estimates and standard errors for `Sample Type`Sputum and `Treatment Group`ON are different for our two models. This is because whenever we change something (add a covariate, add an interaction, etc) we are fitting a different model. Our strongest advice on the subject of "which model to choose?" is to be motivated by your scientific question, and consider the classification of variables presented in the lecture: predictor of interest (always include), precision variables (good to include most important ones), confounders (always include, but use the actual definition, not the way most people talk about it) and relevant effect modifiers (include if scientifically relevant)). 
 
-Finally, we could model the ddpcr as counts coming from a random process and we are interested in exploring how the mean of these counts may be related to the `Sample Type`. An option for this is using a Generalized Linear Model with a log link function (using a Poisson regression). We can do this in R using the `rigr` package with the `rate` argument. While we we could use the `glm` function in the `stats` package, we like `rigr` because by default it uses robust standard errors (these are robust to certain types of model misspecification).   
+If we would prefer to target a parameter that represents fold-differences in means, we can use Poisson regression. We can do this in R using the `rigr` package with the `rate` argument. While we we could use the `glm` function in the `stats` package, we like `rigr` because by default it uses robust standard errors (these are robust to certain types of model misspecification).   
 
 ```{r}
 # install rigr (only if you don't already have it installed)
@@ -233,10 +236,12 @@ coef(mod_counts_type)
 
 How do we interpret these coefficients? 
 
-Since in this model we are using a log link function, our coefficients describe how the log(expected counts) differs between saliva samples and sputum samples. A p-value lower than 2e-16 (at an alpha level of 0.05) indicates we have enough evidence to reject there is no difference between these log(expected counts). And by exponentiating  the estimated coefficient (exp(7.336e-01) = 2.082564), we can say that the estimated expected counts observed for samples of Sputum is 2.08 times higher than the estimated expected counts for samples of saliva.
+By exponentiating the estimated coefficient (`exp(0.73)` = 2.08), we can say that the mean ddPCR measurement observed for samples of Sputum is 2.08 times higher than the mean ddPCR measurement for samples of saliva. A p-value of 0.01 (at an alpha level of 0.05) indicates we have enough evidence to reject the hypothesis that there is no fold-difference in ddPCR measurements between sputum and saliva samples.
 
 Now create your own model, by selecting:
+
 1. Two covariates that you think could potentially be associated to the ddpcr counts in some scale. 
+
 2. How are you interested in exploring these associations? 
 Include your fitted model here: 
 
@@ -247,3 +252,4 @@ coef(My_own_mod)
 ```
 
 And then provide an interpretation on your results: 
+
