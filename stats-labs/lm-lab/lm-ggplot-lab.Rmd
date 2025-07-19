@@ -196,7 +196,7 @@ Our estimate of 1,006,955 for the coefficient for `Sample Type`Sputum tells us t
 
 We have a p-value of 0.01. If we use a alpha level of 0.05, we reject the null hypothesis that there is no difference in the true mean concentration in sputum and saliva samples. 
 
-Now, let's fit a model with multiple covariates. Let's consider `Treatment Group` and `Sample Type`. In order to fit this model, add the right hand side of the formula below, using the `+` operator to add a second covariate. 
+Now, let's fit a model with multiple covariates. Let's consider `Treatment Group` and `Sample Type`. In order to fit this model, add to the right hand side of the formula below, using the `+` operator to add a second covariate. 
 
 ```{r}
 mod_treat_type <- lm(ddpcr ~ *add formula here*, data = both)
@@ -328,13 +328,19 @@ adjustmentSets(dag2, type = "canonical", effect = "total")
 adjustmentSets(dag2, type = "minimal", effect = "direct")
 ```
 
-Now, the results are a little different. The argument `effect` tells us the type of effect we're looking for, `total` means that we care about the effect of disease on microbe abundance through both direct causal pathways and indirect pathways (including the path from disease to antibiotic use to microbe abundance). Typically, unless otherwise specified, we ask questions about the total effect. When we want the total effect, we should avoid including antibiotic use in our adjustment set, because if we account for it separately then we won't be able to include it in our disease effect. 
+Now, the results are a little different. The argument `effect` tells us the type of effect we're looking for. `total` means that we care about the effect of disease on microbe abundance through both direct causal pathways (the single causal path from the exposure/predictor to the outcome/response) and indirect pathways (including the path from disease to antibiotic use to microbe abundance). 
 
-However, if we want the direct effect, i.e. only the effect of disease on microbe abundance through the direct path, not the indirect effect through antibiotic use, then we can use `effect = "direct"`. This adjustment set does include age, diet, and antibiotic use. 
+It's not "better" to look at total effects, nor direct effects. They answer different scientific questions! Your research scope and questions will guide your choice here. 
+
+If we wanted to estimate the **total effect**, we should avoid including antibiotic use in our adjustment set. Informally, accounting for it "splits" the pathway and means we can't focus on the effect of disease, like we wanted.  
+
+However, if we want the **direct effect** (i.e. only the effect of disease on microbe abundance through the direct path, not the indirect effect through antibiotic use) then we can use `effect = "direct"`. This adjustment set does include age, diet, and antibiotic use. Including antibiotic use "blocks", or accounts for, the contribution of antibiotic usage, allowing us to target only the direct effect. 
 
 ### Scenario 3 
 
-The growth rate of bacteria can be impacted by temperature. You observe that the transcript abundance of the common cell division ftsZ gene changes based on ocean temperature, and want to study this effect. You also observe that transcript abundance of the ftsZ gene is affected by time of day. Additionally, both ocean temperature and the abundance of organisms carrying the ftsZ gene are affected by season. Ocean temperature also affects nutrient concentrations, which in turn affects the abundance of organisms carrying gene ftsZ. 
+The growth rate of bacteria can be impacted by temperature. You heard a rumor that the expression of the cell division ftsZ gene changes based on ocean temperature, and want to study this effect. But you also know that expression of the ftsZ gene is affected by time of day. Additionally, both ocean temperature and the abundance of organisms carrying the ftsZ gene are affected by season. Ocean temperature also affects nutrient concentrations, which in turn affects the abundance of organisms carrying gene ftsZ. 
+
+Thankfully, you qPCR'ed that gene, and have learnt some stuff about principled approaches to choosing adjustment sets. So, you can make an analysis plan to target the scientific question you care about, accounting for what you know about this system! 
 
 Use `dagify` to make a DAG object for this scenario, `ggdag` to visualize this DAG, and then `adjustmentSets()` to consider what covariates to include. You can decide what `type` of set you want, and whether you care about the direct or total `effect`. 
 
