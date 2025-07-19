@@ -19,7 +19,7 @@ Wirbel et al. published two pieces of data we'll focus on today:
 
 We'll look at a subset of all $849$ mOTUs Wirbel et al. published.
 
-Although this lab works with mOTUs generated from shotgun data, all of the methods we consider will also work with OTUs generated from amplicon data, or other types of categories (genes, etc.) that we observe as counts from high-throughput sequencing. 
+Although this lab works with mOTUs generated from shotgun data, `radEmu` will also work with OTUs generated from amplicon data, or other types of categories (genes, etc.) that we observe as abundance measurements from high-throughput sequencing. This is true for some of the other methods, although `ALDEx2` and `DESeq2` both will only work when data are integer-valued. 
 
 In this analysis, we're most interested in comparing microbial abundance in cases diagnosed with colorectal cancer to abundances in controls (without this diagnosis).
 
@@ -147,7 +147,7 @@ One version of inputs to `emuFit` are
        only considering the observations from the Chinese study and the
        specific genera that we chose.
 
-There is also an important optional argument:
+There's one more important argument to know about: 
 
 - `run_score_tests`: A logical value denoting whether or not to run score tests.
                     Score tests are awesome in their error rate control (including
