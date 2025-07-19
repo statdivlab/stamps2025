@@ -1,8 +1,10 @@
 ---
 title: "Differential Abundance Lab"
-author: "David Clausen, Amy Willis, Sarah Teichman"
-date: "2024-07-23"
+author: "Amy Willis, Sarah Teichman, David Clausen"
+date: "2025-07-21"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 In this lab we'll explore a dataset published by Wirbel et al. (2019). (https://www.nature.com/articles/s41591-019-0406-6). 
@@ -80,7 +82,7 @@ Let's save these mOTU names in a vector.
 mOTU_names <- colnames(wirbel_otu)
 ```
 
-## Fitting a model
+## The plan and scope
 
 `radEmu` is a package that can be used to estimate log fold differences in the abundance of microbial taxa between levels of a covariate. In this analysis, the covariate that we are primarily interested in is whether a sample is from a case of colorectal cancer or a control. We will make control ("CTR") the reference level:
 
@@ -88,7 +90,15 @@ mOTU_names <- colnames(wirbel_otu)
 wirbel_sample$Group <- factor(wirbel_sample$Group, levels = c("CTR","CRC"))
 ```
 
-While in general we would fit a model to all mOTUs, we are going to subset to some specific genera for the purposes of this lab. Let's look at *Eubacterium*, *Porphyromonas*, *Faecalibacteria*, and *Fusobacterium* for now.
+### Subsetting the dataset (for a tutorial-scale analysis)
+
+Using `radEmu` takes more time when you have more data -- more samples, or more taxa. Your own data will surely be manageable! For a big dataset, it might run over your lunch break. 
+
+However, to emphasise the main ideas of radEmu and minimise wait time, for today, we'll do some subsetting for speed. You wouldn't (and shouldn't) do this for your data!!
+
+You can move quickly through this subsection, since it isn't so important. 
+
+To start, we are going to subset to some specific genera for the purposes of this lab. Let's look at *Eubacterium*, *Porphyromonas*, *Faecalibacteria*, and *Fusobacterium* for now. 
 
 ```{r}
 chosen_genera <- c("Eubacterium", "Faecalibacterium", "Fusobacterium", "Porphyromonas")
@@ -101,23 +111,27 @@ restricted_mOTU_names <- mOTU_name_df %>%
   pull(name)
 ```
 
-While we would generally fit a model using all of our samples, for this lab we are only going to consider data from a case-control study from China.
+In addition, we would generally fit a model using all of our samples, but for this lab, we are only going to consider data from a case-control study from China.
 
 ```{r}
 ch_study_obs <- which(wirbel_sample$Country %in% c("CHI"))
 ```
 
-Next, we want to confirm that all samples have at least one non-zero count across the categories we've chosen and that all categories have at least one non-zero count across the samples we've chosen.
+Finally, we want to confirm that all samples have at least one non-zero count across the categories we've chosen and that all categories have at least one non-zero count across the samples we've chosen. It doesn't make sense to use samples that had no taxa observed! Again, this wouldn't happen at home -- it's just an artefact of restricting our taxon set (from step 1 above). 
 
 ```{r}
 small_Y <- wirbel_otu[ch_study_obs, restricted_mOTU_names]
-sum(rowSums(small_Y) == 0) # no samples have a count sum of 0
+sum(rowSums(small_Y) == 0) # zero samples have a count sum of 0
 sum(colSums(small_Y) == 0) # one category has a count sum of 0
 
 category_to_rm <- which(colSums(small_Y) == 0)
 small_Y <- small_Y[, -category_to_rm]
-sum(colSums(small_Y) == 0)
+sum(colSums(small_Y) == 0) ## good
 ```
+
+Ok, let's fit the model!
+
+## Fitting a model
 
 The function that we use to fit our model is called `emuFit`. It can accept your data in various forms, and here we will show how to use it with data frames as input. You can also input `phyloseq` objects!
 
@@ -133,13 +147,15 @@ One version of inputs to `emuFit` are
        only considering the observations from the Chinese study and the
        specific genera that we chose.
 
-there is also an important optional argument:
+There is also an important optional argument:
 
 - `run_score_tests`: A logical value denoting whether or not to run score tests.
                     Score tests are awesome in their error rate control (including
                     with small sample sizes; though of course larger sample sizes
                     always give better power), but require refitting the model, so
                     can require some compute time.
+
+Let's now fit the model! 
 
 ```{r}
 ch_fit <- emuFit(formula = ~ Group,
@@ -154,16 +170,23 @@ Let's check out what this object looks like!
 ch_fit
 ```
 
-The way to access estimated coefficients and confidence intervals from the model is with `ch_fit$coef`. We'll save the estimates in a vector
+The way to access estimated coefficients and confidence intervals from the model is with `ch_fit$coef`. Let's look at one, then save the estimates in a vector. 
 
 ```{r}
 ch_fit$coef[1, ]
 radEmu_est <- ch_fit$coef$estimate
 ```
 
-Let's interpret this parameter! Here `radEmu` is estimating that the log fold difference in *Fusobacterium nucleatum s. vincentii [ref_mOTU_v2_0754]* associated with cases of CRC (as opposed to controls) minus the *typical* log fold difference associated with cases versus controls across all $46$ mOTUs in this analysis is $1.486$. 
+Let's interpret these results! Here's two equivalent interpretations:
 
-By default `radEmu` estimates this type of parameter, in which we compare the log fold difference in one mOTU to the *typical* (approximately the median) log fold difference in all mOTUs. However, `radEmu` is flexible and will let you define other types of parameters. We can instead compare all log fold differences to the log fold difference for a specific mOTU. 
+- We estimate that the abundance of *Fusobacterium nucleatum s. vincentii [ref_mOTU_v2_0754]* in metagenomes from cases with CRC is $e^{1.486} = 4.4$ times greater than non-CRC controls, when compared to the typical fold-differences in the abundance of taxa across these groups. (Yep -- that's a *ratio* of *ratios*.)
+
+- We estimate that the log-fold difference in the abundance of *Fusobacterium nucleatum s. vincentii [ref_mOTU_v2_0754]* in metagenomes from cases with and without CRC is $1.486$ greater than the typical log-fold difference in the abundance of taxa across these groups. (That's a *difference* in *differences*.)
+
+
+<!-- (as opposed to controls) minus the *typical* log fold difference associated with cases versus controls across all $46$ mOTUs in this analysis is $1.486$.  -->
+
+By default `radEmu` estimates this type of parameter, in which we compare the log fold difference in one mOTU to the *typical* (approximately the median) log fold difference in all mOTUs. However, `radEmu` is flexible -- you can estimate other types of parameters. For example, we can instead compare log fold differences to the log fold difference for a specific (or reference) mOTU. 
 
 What reference mOTU should we use? That's up to you. If there is a specific mOTU that you're interested in comparing to, you can use that one. Or you could choose 
 
@@ -200,7 +223,7 @@ ch_fit_ref$coef[1, ]
 
 How we will interpret our parameter now? Fill in the following:
 
-Here `radEmu` is estimating that the log fold difference in *Fusobacterium nucleatum s. vincentii [ref_mOTU_v2_0754]* associated with cases of CRC (as opposed to controls) minus _______________________________ is $1.867$. 
+We estimate that the  _______________________________ in *Fusobacterium nucleatum s. vincentii [ref_mOTU_v2_0754]* compared to _______________________________ is  _______________________________. 
 
 We can compare the estimates from these two runs of `radEmu`.
 
