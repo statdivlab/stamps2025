@@ -120,13 +120,13 @@ ch_study_obs <- which(wirbel_sample$Country %in% c("CHI"))
 Finally, we want to confirm that all samples have at least one non-zero count across the categories we've chosen and that all categories have at least one non-zero count across the samples we've chosen. It doesn't make sense to use samples that had no taxa observed! Again, this wouldn't happen at home -- it's just an artefact of restricting our taxon set (from step 1 above). 
 
 ```{r}
-small_Y <- wirbel_otu[ch_study_obs, restricted_mOTU_names]
-sum(rowSums(small_Y) == 0) # zero samples have a count sum of 0
-sum(colSums(small_Y) == 0) # one category has a count sum of 0
+abundances_subset <- wirbel_otu[ch_study_obs, restricted_mOTU_names]
+sum(rowSums(abundances_subset) == 0) # zero samples have a count sum of 0
+sum(colSums(abundances_subset) == 0) # one category has a count sum of 0
 
-category_to_rm <- which(colSums(small_Y) == 0)
-small_Y <- small_Y[, -category_to_rm]
-sum(colSums(small_Y) == 0) ## good
+category_to_rm <- which(colSums(abundances_subset) == 0)
+abundances_subset <- abundances_subset[, -category_to_rm]
+sum(colSums(abundances_subset) == 0) ## good
 ```
 
 Ok, let's fit the model!
@@ -160,7 +160,7 @@ Let's now fit the model!
 ```{r}
 ch_fit <- emuFit(formula = ~ Group,
                  data = wirbel_sample[ch_study_obs, ],
-                 Y = small_Y,
+                 Y = abundances_subset,
                  run_score_tests = FALSE)
 ```
 
@@ -183,12 +183,11 @@ Let's interpret these results! Here's two equivalent interpretations:
 
 - We estimate that the log-fold difference in the abundance of *Fusobacterium nucleatum s. vincentii [ref_mOTU_v2_0754]* in metagenomes from cases with and without CRC is $1.486$ greater than the typical log-fold difference in the abundance of taxa across these groups. (That's a *difference* in *differences*.)
 
+- Under the assumumption that most taxa do not differ in abundance between cases with and without CRC, we estimate that the abundance of *Fusobacterium nucleatum s. vincentii [ref_mOTU_v2_0754]* in metagenomes from cases with CRC is $e^{1.486} = 4.4$ times greater than non-CRC controls. 
 
-<!-- (as opposed to controls) minus the *typical* log fold difference associated with cases versus controls across all $46$ mOTUs in this analysis is $1.486$.  -->
+By default `radEmu` compares the log fold difference in one taxon to the *typical* (approximately the median) log fold difference in all taxa. However, `radEmu` can estimate other types of parameters. For example, we can compare log fold differences to the log fold difference for a specific (or reference) taxon.  
 
-By default `radEmu` estimates this type of parameter, in which we compare the log fold difference in one mOTU to the *typical* (approximately the median) log fold difference in all mOTUs. However, `radEmu` is flexible -- you can estimate other types of parameters. For example, we can instead compare log fold differences to the log fold difference for a specific (or reference) mOTU. 
-
-What reference mOTU should we use? That's up to you. If there is a specific mOTU that you're interested in comparing to, you can use that one. Or you could choose 
+What reference taxon should we use? That's up to you. If there is a specific taxon that you're interested in comparing to, you can use that one. Or you could choose 
 
 - the mOTU that has the highest abundance across all samples
 - the mOTU that is present in the highest number of samples
@@ -197,14 +196,10 @@ What reference mOTU should we use? That's up to you. If there is a specific mOTU
 
 We'll give you an example below, but feel free to replace this with a mOTU that you choose (and flag down the TAs if you need help with the code to find the mOTU that you care about)! 
 
-```{r}
-
-```
-
-We'll find the mOTU that is present in the highest proportion of samples from the Chinese cohort, and use this as a reference mOTU.
+We'll find the mOTU that is present in the highest proportion of samples from this cohort, and use this as a reference mOTU.
 
 ```{r}
-num_present <- colSums(small_Y > 0)
+num_present <- colSums(abundances_subset > 0)
 ref_num <- which.max(num_present)
 ref_num
 ```
@@ -214,7 +209,7 @@ Now we will refit `radEmu` with the new parameter that we are estimating.
 ```{r}
 ch_fit_ref <- emuFit(formula = ~ Group,
                      data = wirbel_sample[ch_study_obs, ],
-                     Y = small_Y,
+                     Y = abundances_subset,
                      run_score_tests = FALSE,
                      # set our "constraint" i.e. choose our reference mOTU
                      constraint_fn = ref_num)
@@ -276,7 +271,7 @@ The confidence interval for this effect does not include zero -- but (!!!) the k
 
 To investigate further, let's run a robust score test, which is more reliable in these settings (but also takes more time because apparently we can't have nice things). For comparison, we'll also test the mOTU *Fusobacterium nucleatum s. nucleatum [ref_mOTU_v2_0777]*, which we also estimate to have a much larger ratio of concentrations across groups than is typical among the taxa we included in this model fit.
 
-To set up this test, we can again run `emuFit`, giving it the fitted values that it's
+To set up this test, we can again run `emuFit`, giving it the fitted values that it has
 already found:
 
 - `formula`, `data` and `Y` are as before
@@ -286,7 +281,7 @@ to test. Below we show how to identify these, but `j = 3` is F. nucleatum and `j
 the Eubacterium meta mOTU.
 
 ```{r}
-taxa_to_test <- which(colnames(small_Y) %in%
+taxa_to_test <- which(colnames(abundances_subset) %in%
                         c("unknown Eubacterium [meta_mOTU_v2_7116]",
                           "Fusobacterium nucleatum s. nucleatum [ref_mOTU_v2_0777]"))
 ch_fit$B %>% rownames
@@ -297,7 +292,7 @@ two_robust_score_tests <- emuFit(formula = ~ Group,
                                  refit = FALSE,
                                  test_kj = data.frame(k = covariate_to_test,
                                                       j = taxa_to_test),
-                                 Y = small_Y)
+                                 Y = abundances_subset)
 ```
 
 Let's take a look at the test output.
@@ -316,8 +311,7 @@ data.frame(counts = wirbel_otu[ch_study_obs, "unknown Eubacterium [meta_mOTU_v2_
   summarise(count = n())
 ```
 
-We only detect this meta-mOTU in a single sample in the Chinese study cohort! So, yes -- it makes sense that our test returns a relatively large p-value.
-Good job, robust score test!
+We only detect this meta-mOTU in a single sample in the Chinese study cohort! So, yes -- it makes sense that our test returns a relatively large p-value, because there is not much evidence against the null hypothesis. Good job, robust score test!
 
 Now lets look at *F. nucleatum*.
 
@@ -330,14 +324,14 @@ data.frame(counts = wirbel_otu[ch_study_obs,
   summarise(count = n())
 ```
 
-This also makes sense given what we found --  *F. nucleatum* shows up in a sizeable minority of CRC cases, whereas Wirbel et al detect it in only one control participant.
+This also makes sense given what we found --  *F. nucleatum* shows up in a sizeable minority of CRC cases, whereas Wirbel et al detect it in only one control participant. That's strongly suggestive that there's a different average abundance of this organism between the groups. 
 
 Now it's your turn. Let's look back at the plot of `radEmu` estimates and confidence intervals. Choose one mOTU from that plot and run a robust score test to find a p-value for it. 
 
 ```{r, eval = FALSE}
 radEmu_plot
 
-taxa_to_test <- which(colnames(small_Y) %in%
+taxa_to_test <- which(colnames(abundances_subset) %in%
                         c("your mOTU here"))
 covariate_to_test <- which("GroupCRC" == ch_fit$B %>% rownames)
 your_robust_score_tests <- emuFit(formula = ~ Group,
@@ -346,7 +340,7 @@ your_robust_score_tests <- emuFit(formula = ~ Group,
                                   refit = FALSE,
                                   test_kj = data.frame(k = covariate_to_test,
                                                       j = taxa_to_test),
-                                  Y = small_Y)
+                                  Y = abundances_subset)
 
 data.frame(counts = wirbel_otu[ch_study_obs,
                                "your mOTU here"],
@@ -365,7 +359,7 @@ test_all <- emuFit(formula = ~ Group,
                    data = wirbel_sample[ch_study_obs, ],
                    fitted_model = ch_fit,
                    refit = FALSE,
-                   Y = small_Y,
+                   Y = abundances_subset,
                    run_score_tests = TRUE)
 ```
 
@@ -378,7 +372,7 @@ radEmu_pvals <- radEmu_coef$pval
 
 ## FastEmu
 
-What if we want to analyze all $845$ mOTUs for the Chinese cohort? While the estimation procedure in `radEmu` can handle this many otus, the score tests will run pretty slowly, because the more categories in our model, the more parameters we have to estimate for each score test, and the longer this process will take.
+What if we want to analyze all $845$ mOTUs for the Chinese cohort? While the estimation procedure in `radEmu` can handle this many taxa, the score tests will run pretty slowly, because the more categories in our model, the more parameters we have to estimate for each score test, and the longer this process will take.
 
 Luckily, we can approximate the robust score tests with a companion method to `radEmu`, `fastEmu`!
 
@@ -392,16 +386,16 @@ library(fastEmu)
 First we need to get rid of all of the mOTUs in the full dataset with only zero counts across the Chinese study cohort.
 
 ```{r}
-bigger_Y <- wirbel_otu[ch_study_obs, ]
-categories_to_rm <- which(colSums(bigger_Y) == 0)
-bigger_Y <- bigger_Y[, -categories_to_rm]
-dim(bigger_Y)
+abundances_subset_larger <- wirbel_otu[ch_study_obs, ]
+categories_to_rm <- which(colSums(abundances_subset_larger) == 0)
+abundances_subset_larger <- abundances_subset_larger[, -categories_to_rm]
+dim(abundances_subset_larger)
 ```
 
 We are left with $758$ mOTUs. Again, we will run robust score tests for our two mOTUs of interest, and you can add in the mOTU that you investigated earlier. 
 
 ```{r}
-taxa_to_test <- which(colnames(bigger_Y) %in%
+taxa_to_test <- which(colnames(abundances_subset_larger) %in%
                         c("unknown Eubacterium [meta_mOTU_v2_7116]",
                           "Fusobacterium nucleatum s. nucleatum [ref_mOTU_v2_0777]",
                           "add your mOTU here"))
@@ -414,9 +408,9 @@ This will take ~1 minute to run.
 ```{r}
 fastEmu_test <- fastEmuFit(formula = ~ Group,
                            data = wirbel_sample[ch_study_obs, ],
-                           Y = bigger_Y,
+                           Y = abundances_subset_larger,
                            # set comparison set to be set from earlier analysis
-                           reference_set = which(colnames(bigger_Y) %in% colnames(small_Y)),
+                           reference_set = which(colnames(abundances_subset_larger) %in% colnames(abundances_subset)),
                            test_kj = data.frame(k = 2, j = taxa_to_test),
                            # set lower tolerances than default
                            # this means the estimates won't be *quite* as precise,
@@ -462,13 +456,13 @@ covariate <- wirbel_sample$Group[ch_study_obs]
 covariate_boolean <- ifelse(covariate == "CRC", TRUE, FALSE)
 X <- cbind(1, covariate_boolean)
 # swap rows and columns (ALDEx2 requires samples as columns)
-small_Y_transpose <- t(small_Y)
+abundances_subset_transpose <- t(abundances_subset)
 ```
 
 Now we're ready to run `ALDEx2`.
 
 ```{r, message = FALSE}
-aldex_clr <- aldex.clr(small_Y_transpose, X, mc.samples=500, denom="all", verbose=FALSE)
+aldex_clr <- aldex.clr(abundances_subset_transpose, X, mc.samples=500, denom="all", verbose=FALSE)
 aldex_res <- aldex.glm(clr = aldex_clr, X)
 aldex_est <- aldex_res$`covariate_boolean:Est`
 aldex_pvals <- aldex_res$`covariate_boolean:pval`
@@ -499,7 +493,7 @@ library(TreeSummarizedExperiment)
 We can start by making a `TreeSummarizedExperiment` object with our data.
 
 ```{r}
-tse_data <- TreeSummarizedExperiment(assays = list("counts" = t(small_Y)),
+tse_data <- TreeSummarizedExperiment(assays = list("counts" = t(abundances_subset)),
                                      colData = data.frame(Group = covariate))
 ```
 
@@ -533,7 +527,7 @@ citation("DESeq2")
 Now, we can run `DESeq2`. 
 
 ```{r, message = FALSE}
-dds <- DESeqDataSetFromMatrix(countData = small_Y_transpose,
+dds <- DESeqDataSetFromMatrix(countData = abundances_subset_transpose,
                               colData = wirbel_sample[ch_study_obs, ],
                               design = ~ Group)
 deseq_res <- DESeq(dds, sfType = "poscounts")
@@ -559,7 +553,7 @@ citation("MicrobiomeStat")
 Now, we can run `LinDA`. 
 
 ```{r, message = FALSE}
-linda_res <- linda(feature.dat = small_Y_transpose, meta.dat = wirbel_sample[ch_study_obs, ],
+linda_res <- linda(feature.dat = abundances_subset_transpose, meta.dat = wirbel_sample[ch_study_obs, ],
                    formula = "~ Group", feature.dat.type = "count", is.winsor = FALSE)
 linda_est <- linda_res$output$GroupCRC$log2FoldChange / log(2)
 # note, we divide by log base 2 fold change by log 2 so that it will be on the same scale as the log fold changes from other methods that use a natural log
@@ -580,7 +574,7 @@ What do you note about the relationship between estimates? Does this surprise yo
 Next, we can compare the p-values. 
 
 ```{r}
-pval_df <- data.frame(mOTU = names(small_Y),
+pval_df <- data.frame(mOTU = names(abundances_subset),
   radEmu_pvals, aldex_pvals, ancom_pvals, deseq_pvals, linda_pvals)
 pval_df %>% dplyr::select(contains("pval")) %>%
   cor(use = "complete.obs")
