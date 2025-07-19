@@ -601,7 +601,7 @@ Interpret the meaning of the minimum q-value from `radEmu` using your knowledge 
 
 This means that `ANCOM-BC2`, `DESeq2`, and `LinDA` find much stronger evidence for differential abundance for some mOTUs in our data (i.e. if we control the false discovery rate at $10\%$ we can make several discoveries), and `radEmu` and `ALDEx2` find weaker evidence (i.e. if we control the false discovery rate at $10\%$ we cannot make discoveries). 
 
-That said, in StatDivLab simulations, with large sample sizes `ANCOM-BC2`, `DESeq2`, and `LinDA` fail to control Type I error, which is why the StatDivLab would hesitate to claim "significant! FDR<0.1!" here. `radEmu` and `ALDEx2` do control Type I error, and don't find anything significant at the 10% FDR level here... there's just not enough strength of evidence at this stringency threshold...  
+That said, in some StatDivLab simulations with large sample sizes, `ANCOM-BC2`, `DESeq2`, and `LinDA` fail to control Type I error, which is why the StatDivLab would hesitate to claim "significant! FDR<0.1!" here. `radEmu` and `ALDEx2` do control Type I error in our simulation settings, and don't find anything significant at the 10% FDR level here... there's just not enough strength of evidence at this stringency threshold...  
 
 Finally, we will compare the overlap between the mOTUs with the lowest q-values from `radEmu` and `ALDEx2`. 
 
@@ -639,15 +639,15 @@ In this lab, we've compared several differential abundance methods: `radEmu`, `f
   - cons: requires a comparison subset of categories, it still slower than several other methods 
 - `ALDEx2`
   - pros: has Type I error rate control in many situations, faster than `radEmu` to test all categories
-  - cons: is pretty conservative (lower power)
+  - cons: is pretty conservative (lower power), uses a pseudocount internally
 - `ANCOM-BC2`
   - pros: high power, faster than `radEmu` to test all categories
-  - cons: fails to control Type I error rate in some situations, can't handle data separation (a common consequence of sparsity)
+  - cons: fails to control Type I error rate in some situations, can't handle data separation (a common consequence of sparsity, taxa that appear only in samples from one covariate level and not another)
 - `DESeq2`
   - pros: faster than `radEmu` to test all categories 
-  - cons: fails to control Type I error in some situations, tailored for RNA-seq data, not microbiome data
+  - cons: fails to control Type I error in some situations, tailored for RNA-seq data not microbiome HTS data
 - `LinDA`
   - pros: faster than `radEmu` to test all categories, high power in some settings
-  - cons: fails to control Type I error in some situations (large sample sizes with sparse data), uses a pseudocount 
+  - cons: fails to control Type I error in some settings (large sample sizes with sparse data), uses a pseudocount internally
 
 Check out the documentation for each of these packages for more information and more practice using them. Although this example uses a single binary covariate, each of these methods can be run with more complex regression models. 
