@@ -26,6 +26,8 @@ Let's begin by loading in the tidyverse, which we'll need for this tutorial.
 library(tidyverse)
 ```
 
+**Small note**: If you receive a message about "tidyverse conflicts" saying something like `package1::function_name() masks package2::function_name()`, do not worry. It is just R letting you know that any time you are using `function_name()`, you are using the one ine package1 and not the one in package 2. Should not cause any troubles in this lab.  
+
 Next, let's load our data. We'll start with two data sets. This data comes from a study of people living with cystic fibrosis. It consists of 16S and droplet digital PCR (ddPCR) data from both saliva and sputum (coughed up mucus) from study participants. More information can be found here: 
 https://journals.asm.org/doi/full/10.1128/mSystems.00296-20?rfr_dat=cr_pub++0pubmed&url_ver=Z39.88-2003&rfr_id=ori%3Arid%3Acrossref.org&
 
@@ -39,11 +41,11 @@ meta <- read_csv("https://raw.githubusercontent.com/statdivlab/stamps2024/main/s
 We can take a look at the beginning of each dataset with the function head
 
 ```{r}
-head(ddpcr) #Correction here for the 
+head(ddpcr) #Correction here for the actual name of the file
 head(meta)
 ```
 
-We'd like to combine these two data sets together. They both contain the variable `sample_name`, so we will match observations based on this variable. `inner_join` combines these two datasets into a single one, cleverly using the `by` argument to figure out how to rows match up. 
+We'd like to combine these two data sets together. They both contain the variable `sample_name`, so we will match observations based on this variable. `inner_join` combines these two datasets into a single one, cleverly using the `by` argument to match up the rows.
 
 Note that when we use `tidyverse` syntax, the pipe symbol %>% is our friend. The pipe lets us chain commands together, using the output of the previous command as the input to the next command. 
 
@@ -63,13 +65,13 @@ both <- both %>%
   mutate(ddpcr = as.numeric(ddpcr)) %>%
   mutate(FEV1 = as.numeric(FEV1)) 
 ```
-The last line guarantees `Subject ID` (which is originally a string variable ordered by alphabetical order), is a categorical variable sorted by its numerical value. 
+The last line guarantees `Subject ID` (which is originally a string variable ordered by alphabetical order) is a categorical variable sorted by its numerical value. 
 
 **Optional exercise:** Later in this lab, we will visualize our data using various plots where Subject ID is utilized as a color variable. Subject ID is a categorical variable that can only take a value from a finite set of options (1, 2, 3, ..., 10). However, it is currently sorted alphabetically, causing ID 10 to appear before 2, 3, ..., 9. To correct this, you can modify the variable in the table by converting it to numeric for proper sorting (using `as.numeric`) and then back to a categorical variable (using `factor`). Complete the code below to perform this modification before proceeding to the plotting section. 
 
 ```{r}
 both <- both %>%
-  mutate(`Subject ID` = factor(as.numeric(`Subject ID`))) # Completed and corrected name of variable
+  mutate(`Subject ID` = factor(as.numeric(`Subject ID`))) # Completed
 ```
 
 You can run each of these lines individually to further explore what each command is doing. 
@@ -190,7 +192,7 @@ We have two rows in the "Coefficients" table. The first row corresponds with the
 
 We have 4 columns. The first column gives the estimate of the coefficient for the intercept or covariate within the row. The second column gives the standard error (remember, this is an estimate of the standard deviation of our estimate). 
 
-By default, `lm` will run hypothesis tests for each regression parameter in the model. In a linear model, this means that for each covariate (or covariate level), it will test the hypothesis that the expected difference in the outcome associated with a one unit increase in that covariate, when holding all other covariates equal, is equal to 0. The third column of the coefficient table output gives a test statistic for this hypothesis, and the fourth column provides a p-value.  
+By default, `lm` will run hypothesis tests for each regression parameter in the model. In a linear model, it will test for each covariate the hypothesis that the expected difference in the outcome associated with a one unit increase in that covariate is equal to 0, when holding all other covariates equal. The third column of the coefficient table output gives a test statistic for this hypothesis, and the fourth column provides a p-value. 
 
 What does the second row of the output tell us? 
 
@@ -331,15 +333,21 @@ adjustmentSets(dag2, type = "canonical", effect = "total")
 adjustmentSets(dag2, type = "minimal", effect = "direct")
 ```
 
-Now, the results are a little different. The argument `effect` tells us the type of effect we're looking for, `total` means that we care about the effect of disease on microbe abundance through both direct causal pathways and indirect pathways (including the path from disease to antibiotic use to microbe abundance). Typically, unless otherwise specified, we ask questions about the total effect. When we want the total effect, we should avoid including antibiotic use in our adjustment set, because if we account for it separately then we won't be able to include it in our disease effect. 
+Now, the results are a little different. The argument `effect` tells us the type of effect we're looking for. `total` means that we care about the effect of disease on microbe abundance through both direct causal pathways (the single causal path *disease -> abundance*) and indirect pathways (including the path *disease -> antibiotic -> abundance*). 
 
-However, if we want the direct effect, i.e. only the effect of disease on microbe abundance through the direct path, not the indirect effect through antibiotic use, then we can use `effect = "direct"`. This adjustment set does include age, diet, and antibiotic use. 
+It's not "better" to look at total effects, nor direct effects. They answer different scientific questions! Your research scope and questions will guide your choice here. 
+
+If we wanted to estimate the **total effect**, we should avoid including antibiotic use in our adjustment set. Informally, accounting for it "splits" the pathway *disease -> antibiotics -> abundance*, and means we can't focus on the effect of disease, like we wanted.  
+
+However, if we want the **direct effect** (i.e. only the effect of disease on microbe abundance through the direct path, not the indirect effect through antibiotic use) then we can use `effect = "direct"`. This adjustment set does include age, diet, and antibiotic use. Including antibiotic use "blocks", or accounts for, the contribution of antibiotic usage, allowing us to target only the direct effect. 
 
 ### Scenario 3 
 
-The growth rate of bacteria can be impacted by temperature. You observe that the transcript abundance of the common cell division ftsZ gene changes based on ocean temperature, and want to study this effect. You also observe that transcript abundance of the ftsZ gene is affected by time of day. Additionally, both ocean temperature and the abundance of organisms carrying the ftsZ gene are affected by season. Ocean temperature also affects nutrient concentrations, which in turn affects the abundance of organisms carrying gene A. 
+The growth rate of bacteria can be impacted by temperature. You heard a rumor that the expression of the cell division ftsZ gene changes based on ocean temperature, and want to study this effect. But you also know that expression of the ftsZ gene is affected by time of day. Additionally, both ocean temperature and the abundance of organisms carrying the ftsZ gene are affected by season. Ocean temperature also affects nutrient concentrations, which in turn affects the abundance of organisms carrying gene ftsZ. 
 
-Use `dagify` to make a DAG object for this scenario, `ggdag` to visualize this DAG, and then `adjustmentSets()` to consider what covariates to include. You can decide what `type` of set you want, and whether you care about the direct or total `effect`. 
+Thankfully, you qPCR'ed that gene, and have learnt some stuff about principled approaches to choosing adjustment sets. So, you can make an analysis plan to target the scientific question you care about, accounting for what you know about this system! 
+
+Use `dagify` to make a DAG object for this scenario, `ggdag` to visualize this DAG, and then `adjustmentSets()` to consider what covariates to include. You can decide what `type` of set you want, and whether you care about the direct or total `effect`.
 
 ```{r}
 dag3 <- dagify(
