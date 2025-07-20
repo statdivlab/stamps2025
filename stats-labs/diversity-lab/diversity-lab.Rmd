@@ -1,7 +1,7 @@
 ---
 title: "Diversity estimation lab"
 author: "Sarah Teichman, Amy Willis, Pauline Trinh, and Shirley Mathur"
-date: "2024-07-23"
+date: "2025-07-22"
 output: html_document
 ---
 
