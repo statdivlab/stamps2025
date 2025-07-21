@@ -7,6 +7,8 @@ editor_options:
   chunk_output_type: console
 ---
 
+This lab provides an introduction to `radEmu`, a description of `fastEmu` and when you might use it, a demonstration of several other popular differential abundance methods, and a comparison of results between them. This is much more material then you'll have time to get through in this time. Feel free to use it later as a resource, or if you are particularly interested you can keep working through it in the next few days (and chat with us if you have questions!).
+
 In this lab we'll explore a dataset published by Wirbel et al. (2019). (https://www.nature.com/articles/s41591-019-0406-6). 
 
 This is a meta-analysis of case-control studies, meaning that Wirbel et al. collected raw sequencing data from studies other researchers conducted and re-analyzed it (in this case, they also collected some new data of their own).
