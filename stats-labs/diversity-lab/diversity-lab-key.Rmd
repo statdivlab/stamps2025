@@ -44,8 +44,7 @@ GlobalPatterns
 
 Here we see that `GlobalPatterns` is a `phyloseq` object containing an otu table, taxonomy table, sample data, and a phylogenetic tree.
 
-Use the appropriate phyloseq functions to learn how many samples and variables we have in our data.
-(Hint: Refer to phyloseq tutorial to find these functions!)
+Use the `phyloseq` functions `nsamples()` and `sample_variables()` to learn how many samples and variables we have in our data.
 
 ```{r}
 nsamples(GlobalPatterns)
