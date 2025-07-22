@@ -53,8 +53,7 @@ Use the `phyloseq` functions `nsamples()` and `sample_variables()` to learn how 
 How many samples and covariates are there in our data?
 
 
-Now, we're particularly interested in looking at only the water samples so we are going to need to subset our samples using the variable SampleType. Fill in the appropriate phyloseq function below to subset our data in
-this way.
+Now, we're particularly interested in looking at only the water samples so we are going to need to subset our samples using the variable SampleType. You can use the `subset_samples()` function from `phyloseq`. 
 
 ```{r, eval=FALSE}
 water <- GlobalPatterns %>%
@@ -66,7 +65,7 @@ water <- GlobalPatterns %>%
 
 We need to decide at which taxonomic level we're interested in understanding diversity.
 
-Let's say we're interested in understanding the diversity in our water samples at the Order level. Fill in the blank to use the appropriate function in `phyloseq` to summarize our data at the Order level.
+Let's say we're interested in understanding the diversity in our water samples at the Order level. You can use the `tax_glom()` function from `phyloseq` to summarize our data at the Order level.
 
 ```{r, eval=FALSE}
 water_order <- water %>% __________("Order")
